@@ -289,7 +289,7 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
         </div>
         <p class="auth-intro">记录每一把琴的状态，让保养刚好发生在需要的时候。</p>
         <form id="login-form" class="form-stack" novalidate>
-          <div class="field-group"><label for="login-email">邮箱</label><input id="login-email" name="email" type="email" inputmode="email" autocomplete="email" placeholder="请输入管理员邮箱" required /></div>
+          <div class="field-group"><label for="login-email">登录账号</label><input id="login-email" name="email" type="text" inputmode="text" autocomplete="username" placeholder="请输入数字或字母账号" required /></div>
           <div class="field-group"><label for="login-password">密码</label><div class="password-field"><input id="login-password" name="password" type="password" autocomplete="current-password" placeholder="请输入密码" required /><button id="toggle-password" class="icon-button password-toggle" type="button" aria-label="显示密码" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none"><path d="M2.5 12s3.4-6 9.5-6 9.5 6 9.5 6-3.4 6-9.5 6-9.5-6-9.5-6Z" stroke="currentColor" stroke-width="1.8"/><circle cx="12" cy="12" r="2.7" stroke="currentColor" stroke-width="1.8"/></svg></button></div></div>
           <p id="login-error" class="form-message form-message--error" role="alert" hidden></p>
           <button id="login-submit" class="button button--primary button--block button--large" type="submit"><span class="button-text">登录</span><span class="button-spinner" aria-hidden="true"></span></button>
@@ -1073,10 +1073,22 @@ async function seedDemo() {
   } finally { setAppLoading(false); }
 }
 
+// 为兼容当前 Firebase 账号 001@1.com，网站显示“001”时会在后台自动拼接为 001@1.com。
+// 以后新增账号也按“账号@1.com”的格式在 Firebase Authentication 中创建即可。
+const AUTH_USERNAME_SUFFIX = "@1.com";
+
+function usernameToAuthEmail(username) {
+  const value = String(username || "").trim();
+  if (!/^[A-Za-z0-9._-]{1,64}$/.test(value)) {
+    throw new Error("账号只能使用数字、字母、点、下划线或连字符，长度 1-64 位。");
+  }
+  return `${value}${AUTH_USERNAME_SUFFIX}`;
+}
+
 function normalizeAuthError(error) {
   const map = {
-    "auth/invalid-credential": "邮箱或密码不正确。",
-    "auth/invalid-email": "邮箱格式不正确。",
+    "auth/invalid-credential": "账号或密码不正确。",
+    "auth/invalid-email": "账号格式不正确。",
     "auth/user-disabled": "这个账号已被禁用。",
     "auth/too-many-requests": "尝试次数过多，请稍后再试。",
     "auth/network-request-failed": "网络连接失败，请检查网络。",
@@ -1092,18 +1104,18 @@ function normalizeAuthError(error) {
 
 function hydrateAccount(user) {
   const email = user?.email || "";
-  const name = email ? email.split("@")[0] : "管理员";
-  $("#user-name").textContent = "管理员";
-  $("#user-email").textContent = email || "未登录";
+  const username = email ? email.split("@")[0] : "";
+  $("#user-name").textContent = username || "管理员";
+  $("#user-email").textContent = user ? "已登录" : "未登录";
   $("#user-email").title = email;
-  $("#user-avatar").textContent = (name[0] || "管").toUpperCase();
+  $("#user-avatar").textContent = (username[0] || "管").toUpperCase();
 }
 
 function bindStaticEvents() {
   $("#login-form")?.addEventListener("submit", async (event) => {
     event.preventDefault();
     const form = event.currentTarget;
-    const email = form.email.value.trim();
+    const username = form.email.value.trim();
     const password = form.password.value;
     const errorEl = $("#login-error");
     const submit = $("#login-submit");
@@ -1111,6 +1123,7 @@ function bindStaticEvents() {
     submit.classList.add("is-loading");
     submit.disabled = true;
     try {
+      const email = usernameToAuthEmail(username);
       await signInWithEmailAndPassword(auth, email, password);
     } catch (error) {
       errorEl.textContent = normalizeAuthError(error);
