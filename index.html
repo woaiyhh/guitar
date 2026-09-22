@@ -409,6 +409,27 @@ function diffDays(date) {
   return Math.round((b - a) / 86400000);
 }
 
+function addMonthsDate(dateValue, months = 3) {
+  if (!dateValue) return "";
+  const [year, month, day] = String(dateValue).split("-").map(Number);
+  if (!year || !month || !day) return "";
+  const target = new Date(Date.UTC(year, month - 1 + months, 1));
+  const lastDay = new Date(Date.UTC(target.getUTCFullYear(), target.getUTCMonth() + 1, 0)).getUTCDate();
+  const safeDay = Math.min(day, lastDay);
+  return `${target.getUTCFullYear()}-${String(target.getUTCMonth() + 1).padStart(2, "0")}-${String(safeDay).padStart(2, "0")}`;
+}
+
+function getEffectiveNextMaintenanceDate(guitarId) {
+  const latest = getLatestMaintenance(guitarId);
+  if (!latest) return "";
+  return latest.nextMaintenanceDate || addMonthsDate(latest.maintenanceDate, 3);
+}
+
+function isMaintenanceReminderEnabled(personId) {
+  const person = getPerson(personId);
+  return person?.maintenanceReminder !== false;
+}
+
 function maintenanceStatus(nextDate) {
   if (!nextDate) return { key: "unset", label: "未设置", className: "badge--gray" };
   const days = diffDays(nextDate);
@@ -580,24 +601,26 @@ function renderDashboard() {
     ...g,
     person: getPerson(g.personId),
     latest: getLatestMaintenance(g.id),
-  })).filter((x) => x.latest?.nextMaintenanceDate);
+    nextMaintenanceDate: getEffectiveNextMaintenanceDate(g.id),
+    reminderEnabled: isMaintenanceReminderEnabled(g.personId),
+  })).filter((x) => x.nextMaintenanceDate && x.reminderEnabled);
 
   const upcoming = guitarsWithDue.filter((x) => {
-    const days = diffDays(x.latest.nextMaintenanceDate);
+    const days = diffDays(x.nextMaintenanceDate);
     return days >= 0 && days <= 30;
-  }).sort((a, b) => a.latest.nextMaintenanceDate.localeCompare(b.latest.nextMaintenanceDate));
+  }).sort((a, b) => a.nextMaintenanceDate.localeCompare(b.nextMaintenanceDate));
 
-  const overdue = guitarsWithDue.filter((x) => diffDays(x.latest.nextMaintenanceDate) < 0)
-    .sort((a, b) => a.latest.nextMaintenanceDate.localeCompare(b.latest.nextMaintenanceDate));
+  const overdue = guitarsWithDue.filter((x) => diffDays(x.nextMaintenanceDate) < 0)
+    .sort((a, b) => a.nextMaintenanceDate.localeCompare(b.nextMaintenanceDate));
 
   const upcomingRows = upcoming.length ? upcoming.map((x) => {
-    const days = diffDays(x.latest.nextMaintenanceDate);
-    return `<a class="list-row" href="#/guitar/${x.id}"><div class="list-row__main"><div class="list-row__title">${esc(x.person?.name || "未归属")} ${typeBadge(x.person?.type)}</div><div class="list-row__sub">${esc(x.brand)} ${esc(x.model)} · 下次保养 ${formatDate(x.latest.nextMaintenanceDate)}</div></div><div class="list-row__meta">${days === 0 ? "今天" : `${days} 天后`}<br><span class="badge badge--amber">即将保养</span></div></a>`;
+    const days = diffDays(x.nextMaintenanceDate);
+    return `<a class="list-row" href="#/guitar/${x.id}"><div class="list-row__main"><div class="list-row__title">${esc(x.person?.name || "未归属")} ${typeBadge(x.person?.type)}</div><div class="list-row__sub">${esc(x.brand)} ${esc(x.model)} · 下次保养 ${formatDate(x.nextMaintenanceDate)}</div></div><div class="list-row__meta">${days === 0 ? "今天" : `${days} 天后`}<br><span class="badge badge--amber">即将保养</span></div></a>`;
   }).join("") : `<div class="empty-state"><strong>未来 30 天没有到期的吉他</strong>目前不需要安排保养。</div>`;
 
   const overdueRows = overdue.length ? overdue.map((x) => {
-    const days = Math.abs(diffDays(x.latest.nextMaintenanceDate));
-    return `<a class="list-row" href="#/guitar/${x.id}"><div class="list-row__main"><div class="list-row__title">${esc(x.person?.name || "未归属")} ${typeBadge(x.person?.type)}</div><div class="list-row__sub">${esc(x.brand)} ${esc(x.model)} · 原定 ${formatDate(x.latest.nextMaintenanceDate)}</div></div><div class="list-row__meta">逾期 ${days} 天<br><span class="badge badge--red">已逾期</span></div></a>`;
+    const days = Math.abs(diffDays(x.nextMaintenanceDate));
+    return `<a class="list-row" href="#/guitar/${x.id}"><div class="list-row__main"><div class="list-row__title">${esc(x.person?.name || "未归属")} ${typeBadge(x.person?.type)}</div><div class="list-row__sub">${esc(x.brand)} ${esc(x.model)} · 原定 ${formatDate(x.nextMaintenanceDate)}</div></div><div class="list-row__meta">逾期 ${days} 天<br><span class="badge badge--red">已逾期</span></div></a>`;
   }).join("") : `<div class="empty-state"><strong>没有逾期记录</strong>目前所有已设置日期的吉他都在计划内。</div>`;
 
   return pageShell(
@@ -656,8 +679,9 @@ function renderPersonDetail(id) {
   const guitars = personGuitars(id);
   const cards = guitars.length ? guitars.map((g) => {
     const latest = getLatestMaintenance(g.id);
-    const mStatus = maintenanceStatus(latest?.nextMaintenanceDate);
-    return `<a class="list-row" href="#/guitar/${g.id}"><div class="list-row__main"><div class="list-row__title">${esc(g.brand)} ${esc(g.model)} ${currentStatusBadge(g.status)}</div><div class="list-row__sub">序列号：${esc(g.serialNumber || "未填写")} · 上次保养：${formatDate(latest?.maintenanceDate)}</div></div><div class="list-row__meta">下次 ${formatDate(latest?.nextMaintenanceDate)}<br><span class="badge ${mStatus.className}">${mStatus.label}</span></div></a>`;
+    const nextDate = getEffectiveNextMaintenanceDate(g.id);
+    const mStatus = maintenanceStatus(nextDate);
+    return `<a class="list-row" href="#/guitar/${g.id}"><div class="list-row__main"><div class="list-row__title">${esc(g.brand)} ${esc(g.model)} ${currentStatusBadge(g.status)}</div><div class="list-row__sub">序列号：${esc(g.serialNumber || "未填写")} · 上次保养：${formatDate(latest?.maintenanceDate)}</div></div><div class="list-row__meta">下次 ${formatDate(nextDate)}<br><span class="badge ${mStatus.className}">${mStatus.label}</span></div></a>`;
   }).join("") : `<div class="empty-state"><strong>还没有吉他</strong>给这个人员添加第一把琴。</div>`;
 
   return pageShell(person.name || "未命名", `${person.memberNo || "无编号"} · ${person.type === "student" ? "学员" : "访客"}`, `<button class="button" data-action="edit-person" data-id="${esc(id)}">编辑人员</button>${person.active === false ? `<button class="button" data-action="restore-person" data-id="${esc(id)}">恢复人员</button>` : `<button class="button" data-action="deactivate-person" data-id="${esc(id)}">停用人员</button>`}<button class="button button--ghost" data-action="delete-person" data-id="${esc(id)}">彻底删除</button><button class="button button--primary" data-action="new-guitar" data-person-id="${esc(id)}" ${person.active === false ? "disabled" : ""}>＋ 新增吉他</button>`, `
@@ -677,17 +701,20 @@ function renderGuitars() {
     return hay.includes(q);
   });
   guitars = guitars.filter((g) => {
-    if (state.guitarStatusFilter === "upcoming") return maintenanceStatus(g.latest?.nextMaintenanceDate).key === "upcoming";
-    if (state.guitarStatusFilter === "overdue") return maintenanceStatus(g.latest?.nextMaintenanceDate).key === "overdue";
-    if (state.guitarStatusFilter === "normal") return maintenanceStatus(g.latest?.nextMaintenanceDate).key === "normal";
+    const effectiveNextDate = getEffectiveNextMaintenanceDate(g.id);
+    if (state.guitarStatusFilter === "upcoming") return maintenanceStatus(effectiveNextDate).key === "upcoming";
+    if (state.guitarStatusFilter === "overdue") return maintenanceStatus(effectiveNextDate).key === "overdue";
+    if (state.guitarStatusFilter === "normal") return maintenanceStatus(effectiveNextDate).key === "normal";
     return true;
   });
 
-  guitars.sort((a, b) => String(a.latest?.nextMaintenanceDate || "9999-99-99").localeCompare(String(b.latest?.nextMaintenanceDate || "9999-99-99")));
+  guitars.sort((a, b) => String(getEffectiveNextMaintenanceDate(a.id) || "9999-99-99").localeCompare(String(getEffectiveNextMaintenanceDate(b.id) || "9999-99-99")));
 
   const rows = guitars.length ? guitars.map((g) => {
-    const m = maintenanceStatus(g.latest?.nextMaintenanceDate);
-    return `<tr><td><div class="table-main">${esc(g.person?.name || "未归属")}</div><span class="table-sub">${g.person ? (g.person.type === "student" ? "学员" : "访客") : ""}</span></td><td>${esc(g.brand || "—")}</td><td><div class="table-main">${esc(g.model || "—")}</div><span class="table-sub">${esc(g.serialNumber || "无序列号")}</span></td><td>${currentStatusBadge(g.status)}</td><td>${formatDate(g.latest?.maintenanceDate)}</td><td><span class="badge ${m.className}">${m.label}</span><div class="table-sub">${formatDate(g.latest?.nextMaintenanceDate)}</div></td><td><div class="row-actions"><a class="button button--small" href="#/guitar/${g.id}">查看</a><button class="button button--small" data-action="edit-guitar" data-id="${esc(g.id)}">编辑</button></div></td></tr>`;
+    const nextDate = getEffectiveNextMaintenanceDate(g.id);
+    const m = maintenanceStatus(nextDate);
+    const reminderText = isMaintenanceReminderEnabled(g.personId) ? "" : " · 已关闭提醒";
+    return `<tr><td><div class="table-main">${esc(g.person?.name || "未归属")}</div><span class="table-sub">${g.person ? (g.person.type === "student" ? "学员" : "访客") : ""}</span></td><td>${esc(g.brand || "—")}</td><td><div class="table-main">${esc(g.model || "—")}</div><span class="table-sub">${esc(g.serialNumber || "无序列号")}</span></td><td>${currentStatusBadge(g.status)}</td><td>${formatDate(g.latest?.maintenanceDate)}</td><td><span class="badge ${m.className}">${m.label}</span><div class="table-sub">${formatDate(nextDate)}${reminderText}</div></td><td><div class="row-actions"><a class="button button--small" href="#/guitar/${g.id}">查看</a><button class="button button--small" data-action="edit-guitar" data-id="${esc(g.id)}">编辑</button></div></td></tr>`;
   }).join("") : `<tr><td colspan="7"><div class="empty-state"><strong>没有符合条件的吉他</strong>可以换个搜索关键词或筛选条件。</div></td></tr>`;
 
   const filters = [["all", "全部"], ["upcoming", "即将保养"], ["overdue", "已逾期"], ["normal", "正常"]].map(([key, label]) => `<button class="filter-chip ${state.guitarStatusFilter === key ? "is-active" : ""}" data-action="guitar-filter" data-filter="${key}">${label}</button>`).join("");
@@ -704,12 +731,14 @@ function renderGuitarDetail(id) {
   const person = getPerson(guitar.personId);
   const records = getRecordsForGuitar(id);
   const latest = records[0];
-  const mStatus = maintenanceStatus(latest?.nextMaintenanceDate);
-  const dueDays = latest?.nextMaintenanceDate ? diffDays(latest.nextMaintenanceDate) : null;
-  const recordsHtml = records.length ? records.map((r) => `<article class="maintenance-item"><div class="maintenance-item__top"><div class="maintenance-item__date">${formatDate(r.maintenanceDate)}</div><div>${esc(r.maintenanceType || "常规保养")}</div></div><div class="maintenance-item__body">${esc(r.content || "未填写保养内容")}</div><div class="maintenance-item__meta"><span>费用：${r.cost ? moneyFormatter.format(Number(r.cost)) : "未填写"}</span><span>人员：${esc(r.technician || "未填写")}</span><span>下次：${formatDate(r.nextMaintenanceDate)}</span></div>${r.note ? `<div class="maintenance-item__meta"><span>备注：${esc(r.note)}</span></div>` : ""}<div class="actions" style="margin-top:10px;justify-content:flex-start"><button class="button button--small" data-action="edit-maintenance" data-id="${esc(r.id)}">编辑</button><button class="button button--small" data-action="delete-maintenance" data-id="${esc(r.id)}">删除</button></div></article>`).join("") : `<div class="empty-state"><strong>还没有保养记录</strong>添加第一次保养后，历史会在这里按时间倒序保存。</div>`;
+  const effectiveNextDate = getEffectiveNextMaintenanceDate(id);
+  const mStatus = maintenanceStatus(effectiveNextDate);
+  const dueDays = effectiveNextDate ? diffDays(effectiveNextDate) : null;
+  const reminderEnabled = isMaintenanceReminderEnabled(guitar.personId);
+  const recordsHtml = records.length ? records.map((r) => `<article class="maintenance-item"><div class="maintenance-item__top"><div class="maintenance-item__date">${formatDate(r.maintenanceDate)}</div><div>${esc(r.maintenanceType || "常规保养")}</div></div><div class="maintenance-item__body">${esc(r.content || "未填写保养内容")}</div><div class="maintenance-item__meta"><span>费用：${r.cost ? moneyFormatter.format(Number(r.cost)) : "未填写"}</span><span>人员：${esc(r.technician || "未填写")}</span><span>下次：${formatDate(r.nextMaintenanceDate || addMonthsDate(r.maintenanceDate, 3))}</span></div>${r.note ? `<div class="maintenance-item__meta"><span>备注：${esc(r.note)}</span></div>` : ""}<div class="actions" style="margin-top:10px;justify-content:flex-start"><button class="button button--small" data-action="edit-maintenance" data-id="${esc(r.id)}">编辑</button><button class="button button--small" data-action="delete-maintenance" data-id="${esc(r.id)}">删除</button></div></article>`).join("") : `<div class="empty-state"><strong>还没有保养记录</strong>添加第一次保养后，历史会在这里按时间倒序保存。</div>`;
 
   return pageShell(`${guitar.brand || "未填写品牌"} ${guitar.model || ""}`.trim(), `序列号：${guitar.serialNumber || "未填写"} · 所属：${person?.name || "未归属"}`, `<a class="button" href="#/person/${guitar.personId}">查看人员</a><button class="button" data-action="edit-guitar" data-id="${esc(id)}">编辑吉他</button><button class="button" data-action="qr-guitar" data-id="${esc(id)}">二维码</button><button class="button button--primary" data-action="new-maintenance" data-guitar-id="${esc(id)}">＋ 新增保养</button>`, `
-    <div class="detail-grid"><section class="detail-card"><div class="detail-card__body"><div class="detail-head"><div><h3 class="detail-title">${esc(guitar.brand || "未填写品牌")} ${esc(guitar.model || "")}</h3><p class="detail-sub">${person ? `${esc(person.name)} · ${person.type === "student" ? "学员" : "访客"}` : "未归属人员"}</p></div><div style="display:grid;gap:7px;text-align:right">${currentStatusBadge(guitar.status)}<span class="badge ${mStatus.className}">${mStatus.label}</span></div></div><dl class="kv-grid"><div class="kv"><dt>品牌</dt><dd>${esc(guitar.brand || "未填写")}</dd></div><div class="kv"><dt>型号</dt><dd>${esc(guitar.model || "未填写")}</dd></div><div class="kv"><dt>序列号</dt><dd>${esc(guitar.serialNumber || "未填写")}</dd></div><div class="kv"><dt>购买日期</dt><dd>${formatDate(guitar.purchaseDate)}</dd></div><div class="kv"><dt>上次保养</dt><dd>${formatDate(latest?.maintenanceDate)}</dd></div><div class="kv"><dt>下次保养</dt><dd>${formatDate(latest?.nextMaintenanceDate)}</dd></div><div class="kv"><dt>保养提醒</dt><dd>${latest?.nextMaintenanceDate ? (dueDays === 0 ? "今天" : dueDays > 0 ? `还有 ${dueDays} 天` : `已逾期 ${Math.abs(dueDays)} 天`) : "未设置"}</dd></div><div class="kv"><dt>备注</dt><dd>${esc(guitar.note || "无")}</dd></div></dl><div class="notice" style="margin-top:18px">照片云端上传暂未启用：Firebase Cloud Storage 目前要求 Blaze 计费计划，因此第一版保持 100% Spark 免费方案，不上传云端图片。</div></div></section><section class="panel"><header class="panel__header"><div><h3>保养历史</h3><span>${records.length} 条记录</span></div></header><div class="maintenance-list">${recordsHtml}</div></section></div>`
+    <div class="detail-grid"><section class="detail-card"><div class="detail-card__body"><div class="detail-head"><div><h3 class="detail-title">${esc(guitar.brand || "未填写品牌")} ${esc(guitar.model || "")}</h3><p class="detail-sub">${person ? `${esc(person.name)} · ${person.type === "student" ? "学员" : "访客"}` : "未归属人员"}</p></div><div style="display:grid;gap:7px;text-align:right">${currentStatusBadge(guitar.status)}<span class="badge ${mStatus.className}">${mStatus.label}</span></div></div><dl class="kv-grid"><div class="kv"><dt>品牌</dt><dd>${esc(guitar.brand || "未填写")}</dd></div><div class="kv"><dt>型号</dt><dd>${esc(guitar.model || "未填写")}</dd></div><div class="kv"><dt>序列号</dt><dd>${esc(guitar.serialNumber || "未填写")}</dd></div><div class="kv"><dt>购买日期</dt><dd>${formatDate(guitar.purchaseDate)}</dd></div><div class="kv"><dt>上次保养</dt><dd>${formatDate(latest?.maintenanceDate)}</dd></div><div class="kv"><dt>下次保养</dt><dd>${formatDate(effectiveNextDate)}</dd></div><div class="kv"><dt>保养提醒</dt><dd>${effectiveNextDate ? (dueDays === 0 ? "今天" : dueDays > 0 ? `还有 ${dueDays} 天` : `已逾期 ${Math.abs(dueDays)} 天`) : "未设置"}</dd></div><div class="kv"><dt>提醒设置</dt><dd>${reminderEnabled ? '<span class="badge badge--green">已开启</span>' : '<span class="badge badge--gray">已关闭</span>'}</dd></div><div class="kv"><dt>备注</dt><dd>${esc(guitar.note || "无")}</dd></div></dl><div class="notice" style="margin-top:18px">照片云端上传暂未启用：Firebase Cloud Storage 目前要求 Blaze 计费计划，因此第一版保持 100% Spark 免费方案，不上传云端图片。</div></div></section><section class="panel"><header class="panel__header"><div><h3>保养历史</h3><span>${records.length} 条记录 · 默认按季度（每 3 个月）顺延</span></div></header><div class="maintenance-list">${recordsHtml}</div></section></div>`
   );
 }
 
@@ -772,6 +801,7 @@ async function savePerson(form, personId = null) {
     phone: String(formData.get("phone") || "").trim(),
     note: String(formData.get("note") || "").trim(),
     active: formData.get("active") === "on",
+    maintenanceReminder: formData.get("maintenanceReminder") === "on",
     updatedAt: now,
   };
   if (!data.name) throw new Error("请填写姓名。");
@@ -829,14 +859,18 @@ async function saveGuitar(form, guitarId = null) {
 async function saveMaintenance(form, recordId = null) {
   const formData = new FormData(form);
   const now = Date.now();
+  const maintenanceDate = String(formData.get("maintenanceDate") || todayISO());
+  const autoQuarterly = formData.get("autoQuarterly") === "on";
+  const manualNextDate = String(formData.get("nextMaintenanceDate") || "");
   const data = {
     guitarId: String(formData.get("guitarId") || ""),
-    maintenanceDate: String(formData.get("maintenanceDate") || todayISO()),
+    maintenanceDate,
     maintenanceType: String(formData.get("maintenanceType") || "常规保养"),
     content: String(formData.get("content") || "").trim(),
     cost: String(formData.get("cost") || "").trim(),
     technician: String(formData.get("technician") || "").trim(),
-    nextMaintenanceDate: String(formData.get("nextMaintenanceDate") || ""),
+    nextMaintenanceDate: autoQuarterly ? addMonthsDate(maintenanceDate, 3) : manualNextDate,
+    autoQuarterlyReminder: autoQuarterly,
     note: String(formData.get("note") || "").trim(),
     updatedAt: now,
   };
@@ -858,7 +892,8 @@ async function saveMaintenance(form, recordId = null) {
 
 function openPersonModal(personId = null) {
   const p = personId ? getPerson(personId) : null;
-  const body = `<form id="person-form" class="form-grid" data-id="${esc(personId || "")}"><div class="field-group"><label>姓名 *</label><input name="name" required value="${esc(p?.name || "")}" placeholder="例如：张三"></div><div class="field-group"><label>类型 *</label><select name="type"><option value="student" ${p?.type === "student" || !p ? "selected" : ""}>学员</option><option value="visitor" ${p?.type === "visitor" ? "selected" : ""}>访客</option></select></div><div class="field-group"><label>手机号</label><input name="phone" inputmode="tel" value="${esc(p?.phone || "")}" placeholder="可选"></div><div class="field-group"><label>状态</label><label style="display:flex;gap:8px;align-items:center;height:42px"><input name="active" type="checkbox" ${p?.active !== false ? "checked" : ""}> 当前启用</label></div><div class="field-group full"><label>备注</label><textarea name="note" placeholder="可记录与吉他保养相关的补充信息">${esc(p?.note || "")}</textarea></div></form>`;
+  const reminderEnabled = p?.maintenanceReminder !== false;
+  const body = `<form id="person-form" class="form-grid" data-id="${esc(personId || "")}"><div class="field-group"><label>姓名 *</label><input name="name" required value="${esc(p?.name || "")}" placeholder="例如：张三"></div><div class="field-group"><label>类型 *</label><select name="type"><option value="student" ${p?.type === "student" || !p ? "selected" : ""}>学员</option><option value="visitor" ${p?.type === "visitor" ? "selected" : ""}>访客</option></select></div><div class="field-group"><label>手机号</label><input name="phone" inputmode="tel" value="${esc(p?.phone || "")}" placeholder="可选"></div><div class="field-group"><label>状态</label><label style="display:flex;gap:8px;align-items:center;height:42px"><input name="active" type="checkbox" ${p?.active !== false ? "checked" : ""}> 当前启用</label></div><div class="field-group full"><label>保养提醒</label><label style="display:flex;gap:10px;align-items:center;min-height:42px"><input name="maintenanceReminder" type="checkbox" ${reminderEnabled ? "checked" : ""}> 将此人的吉他纳入“即将保养 / 已逾期”列表</label><p class="field-help">开启后，该人的吉他会按最近一次保养日期每 3 个月自动计算下一次保养。</p></div><div class="field-group full"><label>备注</label><textarea name="note" placeholder="可记录与吉他保养相关的补充信息">${esc(p?.note || "")}</textarea></div></form>`;
   showModal({ title: p ? "编辑人员" : "新增人员", body, footer: `<button class="button" data-close-modal>取消</button><button class="button button--primary" form="person-form">保存</button>` });
 }
 
@@ -879,9 +914,23 @@ function openGuitarModal(guitarId = null, presetPersonId = "") {
 
 function openMaintenanceModal(guitarId, recordId = null) {
   const r = recordId ? state.data.maintenanceRecords?.[recordId] : null;
-  const body = `<form id="maintenance-form" class="form-grid" data-id="${esc(recordId || "")}"><input type="hidden" name="guitarId" value="${esc(guitarId)}"><div class="field-group"><label>保养日期 *</label><input name="maintenanceDate" type="date" required value="${esc(r?.maintenanceDate || todayISO())}"></div><div class="field-group"><label>保养类型</label><select name="maintenanceType">${["常规保养","换弦","清洁","琴颈调整","品丝处理","维修","其他"].map((s) => `<option ${r?.maintenanceType === s || (!r && s === "常规保养") ? "selected" : ""}>${s}</option>`).join("")}</select></div><div class="field-group full"><label>保养内容</label><textarea name="content" placeholder="例如：清洁琴体、指板保养、检查琴颈、换弦">${esc(r?.content || "")}</textarea></div><div class="field-group"><label>费用</label><input name="cost" type="number" min="0" step="0.01" value="${esc(r?.cost || "")}" placeholder="例如：100"></div><div class="field-group"><label>保养人员</label><input name="technician" value="${esc(r?.technician || "")}" placeholder="例如：张师傅"></div><div class="field-group"><label>下次保养日期</label><input name="nextMaintenanceDate" type="date" value="${esc(r?.nextMaintenanceDate || "")}"></div><div class="field-group full"><label>备注</label><textarea name="note" placeholder="可选">${esc(r?.note || "")}</textarea></div></form>`;
+  const defaultDate = r?.maintenanceDate || todayISO();
+  const autoQuarterly = r ? (r.autoQuarterlyReminder !== false) : true;
+  const suggestedNextDate = autoQuarterly ? addMonthsDate(defaultDate, 3) : (r?.nextMaintenanceDate || "");
+  const body = `<form id="maintenance-form" class="form-grid" data-id="${esc(recordId || "")}"><input type="hidden" name="guitarId" value="${esc(guitarId)}"><div class="field-group"><label>保养日期 *</label><input name="maintenanceDate" type="date" required value="${esc(defaultDate)}"></div><div class="field-group"><label>保养类型</label><select name="maintenanceType">${["常规保养","换弦","清洁","琴颈调整","品丝处理","维修","其他"].map((s) => `<option ${r?.maintenanceType === s || (!r && s === "常规保养") ? "selected" : ""}>${s}</option>`).join("")}</select></div><div class="field-group full"><label>季度提醒</label><label style="display:flex;gap:10px;align-items:center;min-height:42px"><input name="autoQuarterly" type="checkbox" ${autoQuarterly ? "checked" : ""}> 这次保养后自动顺延 3 个月</label><p class="field-help">例如 2026-09-22 保养，下一次自动设为 2026-12-22。取消勾选后可以手动指定日期。</p></div><div class="field-group full"><label>保养内容</label><textarea name="content" placeholder="例如：清洁琴体、指板保养、检查琴颈、换弦">${esc(r?.content || "")}</textarea></div><div class="field-group"><label>费用</label><input name="cost" type="number" min="0" step="0.01" value="${esc(r?.cost || "")}" placeholder="例如：100"></div><div class="field-group"><label>保养人员</label><input name="technician" value="${esc(r?.technician || "")}" placeholder="例如：张师傅"></div><div class="field-group"><label>下次保养日期</label><input name="nextMaintenanceDate" type="date" value="${esc(suggestedNextDate)}"></div><div class="field-group full"><label>备注</label><textarea name="note" placeholder="可选">${esc(r?.note || "")}</textarea></div></form>`;
   const footer = `<button class="button" data-close-modal>取消</button>${recordId ? `<button class="button button--danger" data-action="delete-maintenance" data-id="${esc(recordId)}">删除</button>` : ""}<button class="button button--primary" form="maintenance-form">保存</button>`;
-  showModal({ title: recordId ? "编辑保养记录" : "新增保养记录", body, footer });
+  showModal({ title: recordId ? "编辑保养记录" : "新增保养记录", body, footer, onOpen: (container) => {
+    const autoInput = $("[name=autoQuarterly]", container);
+    const maintenanceDateInput = $("[name=maintenanceDate]", container);
+    const nextInput = $("[name=nextMaintenanceDate]", container);
+    const syncQuarterlyDate = () => {
+      if (autoInput?.checked && maintenanceDateInput && nextInput) nextInput.value = addMonthsDate(maintenanceDateInput.value, 3);
+      if (nextInput) nextInput.disabled = Boolean(autoInput?.checked);
+    };
+    autoInput?.addEventListener("change", syncQuarterlyDate);
+    maintenanceDateInput?.addEventListener("change", syncQuarterlyDate);
+    syncQuarterlyDate();
+  }});
 }
 
 function downloadBlob(filename, content, type = "application/json") {
@@ -909,10 +958,10 @@ function exportJSON() {
 }
 
 function exportCSV() {
-  const header = ["人员编号","人员","类型","手机号","品牌","型号","序列号","使用状态","上次保养","下次保养","保养状态"];
+  const header = ["人员编号","人员","类型","手机号","保养提醒","品牌","型号","序列号","使用状态","上次保养","下次保养","保养状态"];
   const rows = getGuitars().map((g) => {
-    const p = getPerson(g.personId); const latest = getLatestMaintenance(g.id); const m = maintenanceStatus(latest?.nextMaintenanceDate);
-    return [p?.memberNo || "", p?.name || "", p?.type === "student" ? "学员" : p ? "访客" : "", p?.phone || "", g.brand || "", g.model || "", g.serialNumber || "", g.status || "", latest?.maintenanceDate || "", latest?.nextMaintenanceDate || "", m.label];
+    const p = getPerson(g.personId); const latest = getLatestMaintenance(g.id); const nextDate = getEffectiveNextMaintenanceDate(g.id); const m = maintenanceStatus(nextDate);
+    return [p?.memberNo || "", p?.name || "", p?.type === "student" ? "学员" : p ? "访客" : "", p?.phone || "", isMaintenanceReminderEnabled(g.personId) ? "开启" : "关闭", g.brand || "", g.model || "", g.serialNumber || "", g.status || "", latest?.maintenanceDate || "", nextDate || "", m.label];
   });
   const csv = [header, ...rows].map((row) => row.map((v) => `"${String(v).replaceAll('"', '""')}"`).join(",")).join("\n");
   downloadBlob(`guitar-maintenance-${todayISO()}.csv`, "\uFEFF" + csv, "text/csv;charset=utf-8");
@@ -1006,9 +1055,9 @@ async function seedDemo() {
     const now = Date.now();
     ensureDatabaseConnected();
     await withTimeout(update(rootRef, {
-      [`people/${p1.key}`]: { id: p1.key, memberNo: "M001", name: "张三", type: "student", phone: "13800000001", note: "", active: true, createdAt: now, createdDate: todayISO(), updatedAt: now },
-      [`people/${p2.key}`]: { id: p2.key, memberNo: "M002", name: "李四", type: "student", phone: "13800000002", note: "", active: true, createdAt: now, createdDate: todayISO(), updatedAt: now },
-      [`people/${p3.key}`]: { id: p3.key, memberNo: "M003", name: "王五", type: "visitor", phone: "13800000003", note: "", active: true, createdAt: now, createdDate: todayISO(), updatedAt: now },
+      [`people/${p1.key}`]: { id: p1.key, memberNo: "M001", name: "张三", type: "student", phone: "13800000001", note: "", active: true, maintenanceReminder: true, createdAt: now, createdDate: todayISO(), updatedAt: now },
+      [`people/${p2.key}`]: { id: p2.key, memberNo: "M002", name: "李四", type: "student", phone: "13800000002", note: "", active: true, maintenanceReminder: true, createdAt: now, createdDate: todayISO(), updatedAt: now },
+      [`people/${p3.key}`]: { id: p3.key, memberNo: "M003", name: "王五", type: "visitor", phone: "13800000003", note: "", active: true, maintenanceReminder: true, createdAt: now, createdDate: todayISO(), updatedAt: now },
       [`guitars/${g1.key}`]: { id: g1.key, displayNo: "G001", personId: p1.key, brand: "Eastman", model: "E3D", serialNumber: "DEMO-E3D-001", purchaseDate: "2026-05-20", status: "正常", note: "", active: true, createdAt: now, updatedAt: now },
       [`guitars/${g2.key}`]: { id: g2.key, displayNo: "G002", personId: p1.key, brand: "Taylor", model: "314ce", serialNumber: "DEMO-T314-002", purchaseDate: "2025-03-12", status: "正常", note: "", active: true, createdAt: now, updatedAt: now },
       [`guitars/${g3.key}`]: { id: g3.key, displayNo: "G003", personId: p2.key, brand: "Martin", model: "D-28", serialNumber: "DEMO-D28-003", purchaseDate: "2024-08-18", status: "待保养", note: "", active: true, createdAt: now, updatedAt: now },
@@ -1035,7 +1084,10 @@ function normalizeAuthError(error) {
     "auth/unauthorized-domain": "当前网站域名尚未加入 Firebase Authentication 的授权域名。",
     "auth/invalid-api-key": "Firebase 配置中的 API Key 无效。",
   };
-  return map[error?.code] || "登录失败，请检查 Firebase Authentication 配置。";
+  if (error?.code) {
+    return `${map[error.code] || "登录失败。"}\n错误代码：${error.code}`;
+  }
+  return `登录失败：${error?.message || "未知错误"}`;
 }
 
 function hydrateAccount(user) {
