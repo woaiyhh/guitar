@@ -373,6 +373,7 @@ const state = {
   guitarStatusFilter: "all",
   modalCleanup: null,
   dbUnsubs: [],
+  dbLoadingTimer: null,
 };
 
 const dateFormatter = new Intl.DateTimeFormat("zh-CN", { year: "numeric", month: "2-digit", day: "2-digit" });
@@ -1184,15 +1185,48 @@ async function openQrModal(guitarId) {
 }
 
 function stopDatabaseListener() {
+  if (state.dbLoadingTimer) {
+    clearTimeout(state.dbLoadingTimer);
+    state.dbLoadingTimer = null;
+  }
   state.dbUnsubs.forEach((unsubscribe) => {
     try { unsubscribe(); } catch {}
   });
   state.dbUnsubs = [];
 }
-
+function databaseDiagnosticMessage() {
+  return `
+    <div class="error-box">
+      <h3 style="margin:0 0 10px">Firebase 数据库连接超时</h3>
+      <p style="margin:0 0 12px;line-height:1.8">网站本身已经打开，但超过 10 秒仍没有拿到 Realtime Database 的首次数据。</p>
+      <p style="margin:0 0 8px"><strong>当前项目：</strong>${esc(firebaseConfig.projectId)}</p>
+      <p style="margin:0 0 8px;word-break:break-all"><strong>数据库：</strong>${esc(firebaseConfig.databaseURL)}</p>
+      <p style="margin:0 0 8px">请检查 Firebase → Realtime Database → Rules 是否为：</p>
+      <pre style="margin:0 0 12px;overflow:auto;background:#f7f6f2;padding:12px;border-radius:10px">{
+  "rules": {
+    ".read": "auth != null",
+    ".write": "auth != null"
+  }
+}</pre>
+      <p style="margin:0;line-height:1.8">如果 Rules 正确，优先检查当前网络是否能够访问 Firebase。请打开浏览器开发者工具 Console，看有没有红色的 Firebase 错误。</p>
+    </div>`;
+}
 function startDatabaseListener() {
   stopDatabaseListener();
+  state.ready = false;
+  renderRoute();
+
+  state.dbLoadingTimer = window.setTimeout(() => {
+    if (state.ready) return;
+    setConnection(false);
+    routeError(databaseDiagnosticMessage(), { html: true });
+  }, 10000);
+
   const stopRoot = onValue(rootRef, (snapshot) => {
+    if (state.dbLoadingTimer) {
+      clearTimeout(state.dbLoadingTimer);
+      state.dbLoadingTimer = null;
+    }
     state.data = snapshot.val() || {};
     state.data.people ||= {};
     state.data.guitars ||= {};
@@ -1201,14 +1235,18 @@ function startDatabaseListener() {
     state.ready = true;
     renderRoute();
   }, (error) => {
+    if (state.dbLoadingTimer) {
+      clearTimeout(state.dbLoadingTimer);
+      state.dbLoadingTimer = null;
+    }
     state.ready = false;
-    routeError(`无法读取 Firebase 数据库：${error?.message || "未知错误"}`);
+    setConnection(false);
+    const code = error?.code ? `（${error.code}）` : "";
+    routeError(`无法读取 Firebase 数据库 ${code}：${esc(error?.message || "未知错误")}<br><br>请检查 Realtime Database Rules，以及当前网络是否能够连接 Firebase。` , { html: true });
   });
-
   const stopConnection = onValue(ref(db, ".info/connected"), (snap) => setConnection(Boolean(snap.val())));
   state.dbUnsubs = [stopRoot, stopConnection];
 }
-
 onAuthStateChanged(auth, (user) => {
   state.user = user;
   const loginView = $("#login-view");
