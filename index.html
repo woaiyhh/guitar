@@ -427,7 +427,14 @@ function getEffectiveNextMaintenanceDate(guitarId) {
 
 function isMaintenanceReminderEnabled(personId) {
   const person = getPerson(personId);
-  return person?.maintenanceReminder !== false;
+  const value = person?.maintenanceReminder;
+  return value !== false && value !== "false" && value !== 0 && value !== "0";
+}
+
+function isMaintenanceReminderIgnored(guitarId) {
+  const guitar = getGuitar(guitarId);
+  const value = guitar?.maintenanceReminderIgnored;
+  return value === true || value === "true" || value === 1 || value === "1";
 }
 
 function maintenanceStatus(nextDate) {
@@ -603,7 +610,8 @@ function renderDashboard() {
     latest: getLatestMaintenance(g.id),
     nextMaintenanceDate: getEffectiveNextMaintenanceDate(g.id),
     reminderEnabled: isMaintenanceReminderEnabled(g.personId),
-  })).filter((x) => x.nextMaintenanceDate && x.reminderEnabled);
+    reminderIgnored: isMaintenanceReminderIgnored(g.id),
+  })).filter((x) => x.nextMaintenanceDate && x.reminderEnabled && !x.reminderIgnored);
 
   const upcoming = guitarsWithDue.filter((x) => {
     const days = diffDays(x.nextMaintenanceDate);
@@ -620,7 +628,7 @@ function renderDashboard() {
 
   const overdueRows = overdue.length ? overdue.map((x) => {
     const days = Math.abs(diffDays(x.nextMaintenanceDate));
-    return `<a class="list-row" href="#/guitar/${x.id}"><div class="list-row__main"><div class="list-row__title">${esc(x.person?.name || "未归属")} ${typeBadge(x.person?.type)}</div><div class="list-row__sub">${esc(x.brand)} ${esc(x.model)} · 原定 ${formatDate(x.nextMaintenanceDate)}</div></div><div class="list-row__meta">逾期 ${days} 天<br><span class="badge badge--red">已逾期</span></div></a>`;
+    return `<div class="list-row"><a class="list-row__main" href="#/guitar/${x.id}"><div class="list-row__title">${esc(x.person?.name || "未归属")} ${typeBadge(x.person?.type)}</div><div class="list-row__sub">${esc(x.brand)} ${esc(x.model)} · 原定 ${formatDate(x.nextMaintenanceDate)}</div></a><div class="list-row__meta"><div>逾期 ${days} 天<br><span class="badge badge--red">已逾期</span></div><button class="button button--small" data-action="ignore-overdue" data-id="${esc(x.id)}">忽略</button></div></div>`;
   }).join("") : `<div class="empty-state"><strong>没有逾期记录</strong>目前所有已设置日期的吉他都在计划内。</div>`;
 
   return pageShell(
@@ -713,7 +721,7 @@ function renderGuitars() {
   const rows = guitars.length ? guitars.map((g) => {
     const nextDate = getEffectiveNextMaintenanceDate(g.id);
     const m = maintenanceStatus(nextDate);
-    const reminderText = isMaintenanceReminderEnabled(g.personId) ? "" : " · 已关闭提醒";
+    const reminderText = !isMaintenanceReminderEnabled(g.personId) ? " · 已关闭提醒" : (isMaintenanceReminderIgnored(g.id) ? " · 已忽略逾期提醒" : "");
     return `<tr><td><div class="table-main">${esc(g.person?.name || "未归属")}</div><span class="table-sub">${g.person ? (g.person.type === "student" ? "学员" : "访客") : ""}</span></td><td>${esc(g.brand || "—")}</td><td><div class="table-main">${esc(g.model || "—")}</div><span class="table-sub">${esc(g.serialNumber || "无序列号")}</span></td><td>${currentStatusBadge(g.status)}</td><td>${formatDate(g.latest?.maintenanceDate)}</td><td><span class="badge ${m.className}">${m.label}</span><div class="table-sub">${formatDate(nextDate)}${reminderText}</div></td><td><div class="row-actions"><a class="button button--small" href="#/guitar/${g.id}">查看</a><button class="button button--small" data-action="edit-guitar" data-id="${esc(g.id)}">编辑</button></div></td></tr>`;
   }).join("") : `<tr><td colspan="7"><div class="empty-state"><strong>没有符合条件的吉他</strong>可以换个搜索关键词或筛选条件。</div></td></tr>`;
 
@@ -735,10 +743,16 @@ function renderGuitarDetail(id) {
   const mStatus = maintenanceStatus(effectiveNextDate);
   const dueDays = effectiveNextDate ? diffDays(effectiveNextDate) : null;
   const reminderEnabled = isMaintenanceReminderEnabled(guitar.personId);
+  const reminderIgnored = isMaintenanceReminderIgnored(guitar.id);
+  const reminderAction = mStatus.key === "overdue"
+    ? (reminderIgnored
+      ? `<button class="button" data-action="restore-overdue" data-id="${esc(id)}">恢复逾期提醒</button>`
+      : `<button class="button" data-action="ignore-overdue" data-id="${esc(id)}">忽略本次逾期</button>`)
+    : "";
   const recordsHtml = records.length ? records.map((r) => `<article class="maintenance-item"><div class="maintenance-item__top"><div class="maintenance-item__date">${formatDate(r.maintenanceDate)}</div><div>${esc(r.maintenanceType || "常规保养")}</div></div><div class="maintenance-item__body">${esc(r.content || "未填写保养内容")}</div><div class="maintenance-item__meta"><span>费用：${r.cost ? moneyFormatter.format(Number(r.cost)) : "未填写"}</span><span>人员：${esc(r.technician || "未填写")}</span><span>下次：${formatDate(r.nextMaintenanceDate || addMonthsDate(r.maintenanceDate, 3))}</span></div>${r.note ? `<div class="maintenance-item__meta"><span>备注：${esc(r.note)}</span></div>` : ""}<div class="actions" style="margin-top:10px;justify-content:flex-start"><button class="button button--small" data-action="edit-maintenance" data-id="${esc(r.id)}">编辑</button><button class="button button--small" data-action="delete-maintenance" data-id="${esc(r.id)}">删除</button></div></article>`).join("") : `<div class="empty-state"><strong>还没有保养记录</strong>添加第一次保养后，历史会在这里按时间倒序保存。</div>`;
 
-  return pageShell(`${guitar.brand || "未填写品牌"} ${guitar.model || ""}`.trim(), `序列号：${guitar.serialNumber || "未填写"} · 所属：${person?.name || "未归属"}`, `<a class="button" href="#/person/${guitar.personId}">查看人员</a><button class="button" data-action="edit-guitar" data-id="${esc(id)}">编辑吉他</button><button class="button" data-action="qr-guitar" data-id="${esc(id)}">二维码</button><button class="button button--primary" data-action="new-maintenance" data-guitar-id="${esc(id)}">＋ 新增保养</button>`, `
-    <div class="detail-grid"><section class="detail-card"><div class="detail-card__body"><div class="detail-head"><div><h3 class="detail-title">${esc(guitar.brand || "未填写品牌")} ${esc(guitar.model || "")}</h3><p class="detail-sub">${person ? `${esc(person.name)} · ${person.type === "student" ? "学员" : "访客"}` : "未归属人员"}</p></div><div style="display:grid;gap:7px;text-align:right">${currentStatusBadge(guitar.status)}<span class="badge ${mStatus.className}">${mStatus.label}</span></div></div><dl class="kv-grid"><div class="kv"><dt>品牌</dt><dd>${esc(guitar.brand || "未填写")}</dd></div><div class="kv"><dt>型号</dt><dd>${esc(guitar.model || "未填写")}</dd></div><div class="kv"><dt>序列号</dt><dd>${esc(guitar.serialNumber || "未填写")}</dd></div><div class="kv"><dt>购买日期</dt><dd>${formatDate(guitar.purchaseDate)}</dd></div><div class="kv"><dt>上次保养</dt><dd>${formatDate(latest?.maintenanceDate)}</dd></div><div class="kv"><dt>下次保养</dt><dd>${formatDate(effectiveNextDate)}</dd></div><div class="kv"><dt>保养提醒</dt><dd>${effectiveNextDate ? (dueDays === 0 ? "今天" : dueDays > 0 ? `还有 ${dueDays} 天` : `已逾期 ${Math.abs(dueDays)} 天`) : "未设置"}</dd></div><div class="kv"><dt>提醒设置</dt><dd>${reminderEnabled ? '<span class="badge badge--green">已开启</span>' : '<span class="badge badge--gray">已关闭</span>'}</dd></div><div class="kv"><dt>备注</dt><dd>${esc(guitar.note || "无")}</dd></div></dl><div class="notice" style="margin-top:18px">照片云端上传暂未启用：Firebase Cloud Storage 目前要求 Blaze 计费计划，因此第一版保持 100% Spark 免费方案，不上传云端图片。</div></div></section><section class="panel"><header class="panel__header"><div><h3>保养历史</h3><span>${records.length} 条记录 · 默认按季度（每 3 个月）顺延</span></div></header><div class="maintenance-list">${recordsHtml}</div></section></div>`
+  return pageShell(`${guitar.brand || "未填写品牌"} ${guitar.model || ""}`.trim(), `序列号：${guitar.serialNumber || "未填写"} · 所属：${person?.name || "未归属"}`, `<a class="button" href="#/person/${guitar.personId}">查看人员</a><button class="button" data-action="edit-guitar" data-id="${esc(id)}">编辑吉他</button>${reminderAction}<button class="button" data-action="qr-guitar" data-id="${esc(id)}">二维码</button><button class="button button--primary" data-action="new-maintenance" data-guitar-id="${esc(id)}">＋ 新增保养</button>`, `
+    <div class="detail-grid"><section class="detail-card"><div class="detail-card__body"><div class="detail-head"><div><h3 class="detail-title">${esc(guitar.brand || "未填写品牌")} ${esc(guitar.model || "")}</h3><p class="detail-sub">${person ? `${esc(person.name)} · ${person.type === "student" ? "学员" : "访客"}` : "未归属人员"}</p></div><div style="display:grid;gap:7px;text-align:right">${currentStatusBadge(guitar.status)}<span class="badge ${mStatus.className}">${mStatus.label}</span></div></div><dl class="kv-grid"><div class="kv"><dt>品牌</dt><dd>${esc(guitar.brand || "未填写")}</dd></div><div class="kv"><dt>型号</dt><dd>${esc(guitar.model || "未填写")}</dd></div><div class="kv"><dt>序列号</dt><dd>${esc(guitar.serialNumber || "未填写")}</dd></div><div class="kv"><dt>购买日期</dt><dd>${formatDate(guitar.purchaseDate)}</dd></div><div class="kv"><dt>上次保养</dt><dd>${formatDate(latest?.maintenanceDate)}</dd></div><div class="kv"><dt>下次保养</dt><dd>${formatDate(effectiveNextDate)}</dd></div><div class="kv"><dt>保养提醒</dt><dd>${effectiveNextDate ? (dueDays === 0 ? "今天" : dueDays > 0 ? `还有 ${dueDays} 天` : `已逾期 ${Math.abs(dueDays)} 天`) : "未设置"}</dd></div><div class="kv"><dt>提醒设置</dt><dd>${reminderEnabled ? '<span class="badge badge--green">已开启</span>' : '<span class="badge badge--gray">已关闭</span>'}${reminderIgnored ? ' <span class="badge badge--gray">本次逾期已忽略</span>' : ''}</dd></div><div class="kv"><dt>备注</dt><dd>${esc(guitar.note || "无")}</dd></div></dl><div class="notice" style="margin-top:18px">照片云端上传暂未启用：Firebase Cloud Storage 目前要求 Blaze 计费计划，因此第一版保持 100% Spark 免费方案，不上传云端图片。</div></div></section><section class="panel"><header class="panel__header"><div><h3>保养历史</h3><span>${records.length} 条记录 · 默认按季度（每 3 个月）顺延</span></div></header><div class="maintenance-list">${recordsHtml}</div></section></div>`
   );
 }
 
@@ -879,6 +893,7 @@ async function saveMaintenance(form, recordId = null) {
   ensureDatabaseConnected();
   if (recordId) {
     await withTimeout(update(ref(db, `maintenanceRecords/${recordId}`), data));
+    await withTimeout(update(ref(db, `guitars/${data.guitarId}`), { maintenanceReminderIgnored: false, updatedAt: now }));
     return recordId;
   }
   const seq = await nextSequence("maintenance");
@@ -887,6 +902,7 @@ async function saveMaintenance(form, recordId = null) {
   data.displayNo = `R${String(seq).padStart(3, "0")}`;
   data.id = newRef.key;
   await withTimeout(set(newRef, data));
+  await withTimeout(update(ref(db, `guitars/${data.guitarId}`), { maintenanceReminderIgnored: false, updatedAt: now }));
   return newRef.key;
 }
 
@@ -1158,6 +1174,18 @@ function bindStaticEvents() {
       if (action === "new-guitar") openGuitarModal(null, button.dataset.personId || "");
       if (action === "edit-guitar") openGuitarModal(button.dataset.id);
       if (action === "new-maintenance") openMaintenanceModal(button.dataset.guitarId);
+      if (action === "ignore-overdue") {
+        ensureDatabaseConnected();
+        await withTimeout(update(ref(db, `guitars/${button.dataset.id}`), { maintenanceReminderIgnored: true, updatedAt: Date.now() }));
+        toast("已忽略这把琴本次逾期提醒。", "success");
+        renderRoute();
+      }
+      if (action === "restore-overdue") {
+        ensureDatabaseConnected();
+        await withTimeout(update(ref(db, `guitars/${button.dataset.id}`), { maintenanceReminderIgnored: false, updatedAt: Date.now() }));
+        toast("已恢复这把琴的逾期提醒。", "success");
+        renderRoute();
+      }
       if (action === "edit-maintenance") {
         const r = state.data.maintenanceRecords?.[button.dataset.id];
         if (r) openMaintenanceModal(r.guitarId, button.dataset.id);
