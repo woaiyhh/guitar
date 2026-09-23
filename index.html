@@ -42,36 +42,21 @@ svg { width: 1.15rem; height: 1.15rem; }
 
 .hidden { display: none !important; }
 
-/* Auth */
-.auth-layout { min-height: 100vh; display: grid; grid-template-columns: minmax(380px, 520px) 1fr; background: var(--surface); }
-.auth-panel { padding: clamp(32px, 6vw, 80px); display: flex; flex-direction: column; justify-content: center; }
-.auth-brand { display: flex; gap: 16px; align-items: center; }
-.brand-mark { width: 42px; height: 42px; border-radius: 12px; display: inline-flex; align-items: center; justify-content: center; background: var(--primary); color: #e6d2b5; flex: 0 0 auto; }
-.brand-mark svg { width: 27px; height: 27px; }
-.brand-mark--large { width: 58px; height: 58px; border-radius: 16px; }
-.brand-mark--large svg { width: 36px; height: 36px; }
-.eyebrow { margin: 0 0 5px; font-size: 11px; letter-spacing: .18em; color: var(--accent); font-weight: 700; }
-.auth-brand h1 { margin: 0; font-size: 34px; letter-spacing: -.035em; }
-.auth-intro { margin: 30px 0 22px; max-width: 410px; font-size: 16px; line-height: 1.8; color: var(--muted); }
-.auth-help { color: var(--muted); font-size: 13px; line-height: 1.7; margin-top: 18px; }
-.auth-aside { position: relative; min-height: 100vh; overflow: hidden; display: flex; align-items: flex-end; padding: clamp(32px, 6vw, 84px); background: radial-gradient(circle at 30% 25%, #526f63 0, transparent 32%), linear-gradient(135deg, #15271f, #2d463b 55%, #15271f); color: #f6f2e9; }
-.auth-aside__texture { position: absolute; inset: 0; opacity: .24; background-image: repeating-linear-gradient(8deg, transparent 0 18px, rgba(231, 207, 170, .14) 19px, transparent 20px); transform: scale(1.2); }
-.auth-aside__copy { position: relative; z-index: 1; max-width: 540px; }
-.auth-aside__copy p { margin: 0 0 10px; font-size: clamp(30px, 4vw, 56px); line-height: 1.08; letter-spacing: -.04em; max-width: 620px; }
-.auth-aside__copy small { letter-spacing: .24em; opacity: .66; }
-.auth-aside__line { display: block; width: 46px; height: 2px; background: #c39a6b; margin-bottom: 20px; }
-.form-stack { display: grid; gap: 18px; max-width: 440px; }
-.field-group { display: grid; gap: 8px; }
-.field-group label { font-size: 13px; font-weight: 650; }
-.field-group input, .field-group select, .field-group textarea, .search-input { width: 100%; border: 1px solid var(--border); background: var(--surface); color: var(--text); border-radius: 12px; padding: 12px 14px; outline: none; transition: border-color .15s, box-shadow .15s; }
-.field-group textarea { min-height: 98px; resize: vertical; }
-.field-group input:focus, .field-group select:focus, .field-group textarea:focus, .search-input:focus { border-color: #839c91; box-shadow: 0 0 0 4px rgba(84, 122, 105, .10); }
-.password-field { position: relative; }
-.password-field input { padding-right: 46px; }
-.password-toggle { position: absolute; right: 7px; top: 7px; }
-.form-message { font-size: 13px; margin: 0; padding: 10px 12px; border-radius: 10px; }
-.form-message--error { background: #fbefed; color: var(--danger); }
-
+/* Splash */
+.splash-screen { position: fixed; inset: 0; z-index: 9999; display: grid; grid-template-columns: minmax(380px, 520px) 1fr; background: var(--surface); transition: opacity .35s ease, visibility .35s ease; }
+.splash-screen.is-hidden { opacity: 0; visibility: hidden; pointer-events: none; }
+.splash-panel { padding: clamp(32px, 6vw, 80px); display: flex; flex-direction: column; justify-content: center; }
+.splash-brand { display: flex; gap: 16px; align-items: center; }
+.splash-brand h1 { margin: 0; font-size: 34px; letter-spacing: -.035em; }
+.splash-intro { margin: 30px 0 22px; max-width: 410px; font-size: 16px; line-height: 1.8; color: var(--muted); }
+.splash-hint { display: flex; gap: 9px; align-items: center; color: var(--muted); font-size: 13px; }
+.splash-hint .loading-spinner { width: 15px; height: 15px; }
+.splash-aside { position: relative; min-height: 100vh; overflow: hidden; display: flex; align-items: flex-end; padding: clamp(32px, 6vw, 84px); background: radial-gradient(circle at 30% 25%, #526f63 0, transparent 32%), linear-gradient(135deg, #15271f, #2d463b 55%, #15271f); color: #f6f2e9; }
+.splash-aside__texture { position: absolute; inset: 0; opacity: .24; background-image: repeating-linear-gradient(8deg, transparent 0 18px, rgba(231, 207, 170, .14) 19px, transparent 20px); transform: scale(1.2); }
+.splash-aside__copy { position: relative; z-index: 1; max-width: 540px; }
+.splash-aside__copy p { margin: 0 0 10px; font-size: clamp(30px, 4vw, 56px); line-height: 1.08; letter-spacing: -.04em; max-width: 620px; }
+.splash-aside__copy small { letter-spacing: .24em; opacity: .66; }
+.splash-aside__line { display: block; width: 46px; height: 2px; background: #c39a6b; margin-bottom: 20px; }
 /* App shell */
 .app-shell { min-height: 100vh; display: grid; grid-template-columns: var(--sidebar) minmax(0, 1fr); }
 .sidebar { position: sticky; top: 0; height: 100vh; display: flex; flex-direction: column; background: var(--primary); color: #edf2ee; padding: 22px 16px; z-index: 30; }
@@ -233,8 +218,8 @@ td { font-size: 13px; }
 
 @media (max-width: 1200px) { .stats-grid { grid-template-columns: repeat(3, minmax(0,1fr)); } .detail-grid { grid-template-columns: 1fr; } }
 @media (max-width: 900px) {
-  .auth-layout { grid-template-columns: 1fr; }
-  .auth-aside { display: none; }
+  .splash-screen { grid-template-columns: 1fr; }
+  .splash-aside { display: none; }
   .app-shell { grid-template-columns: 1fr; }
   .sidebar { position: fixed; left: 0; top: 0; width: min(280px, 85vw); transform: translateX(-105%); transition: transform .2s; box-shadow: 20px 0 50px rgba(0,0,0,.15); }
   .sidebar.is-open { transform: translateX(0); }
@@ -248,8 +233,8 @@ td { font-size: 13px; }
   .two-col, .setting-grid { grid-template-columns: 1fr; }
 }
 @media (max-width: 640px) {
-  .auth-panel { padding: 28px 20px; }
-  .auth-brand h1 { font-size: 28px; }
+  .splash-panel { padding: 28px 20px; }
+  .splash-brand h1 { font-size: 28px; }
   .page-header { align-items: flex-start; flex-direction: column; }
   .actions { justify-content: flex-start; }
   .stats-grid { grid-template-columns: repeat(2, minmax(0,1fr)); }
@@ -279,25 +264,19 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
   <body>
     <a class="skip-link" href="#main-content">跳到主要内容</a>
 
-    <main id="login-view" class="auth-layout">
-      <section class="auth-panel" aria-labelledby="login-title">
-        <div class="auth-brand">
+    <section id="splash-screen" class="splash-screen" aria-label="网站启动画面">
+      <div class="splash-panel">
+        <div class="splash-brand">
           <span class="brand-mark brand-mark--large" aria-hidden="true">
             <svg viewBox="0 0 48 48" fill="none"><path d="M18.4 4.8c6.7 0 12.1 5.4 12.1 12.1 0 2-.5 3.9-1.4 5.5l8.2 8.2a5.8 5.8 0 0 1-8.2 8.2l-8.2-8.2a12.1 12.1 0 1 1-2.5-25.8Z" stroke="currentColor" stroke-width="2.8" stroke-linejoin="round"/><path d="m9.3 9.3 10.2 10.2M6.4 16.1l10.5-2.6M16.1 6.4l-2.6 10.5M28.7 28.7l-5.2 5.2" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/><circle cx="23.2" cy="23.2" r="3.1" fill="currentColor"/></svg>
           </span>
-          <div><p class="eyebrow">MUSIC CLASS · CARE LOG</p><h1 id="login-title">吉他保养档案</h1></div>
+          <div><p class="eyebrow">MUSIC CLASS · CARE LOG</p><h1>吉他保养档案</h1></div>
         </div>
-        <p class="auth-intro">记录每一把琴的状态，让保养刚好发生在需要的时候。</p>
-        <form id="login-form" class="form-stack" novalidate>
-          <div class="field-group"><label for="login-email">登录账号</label><input id="login-email" name="email" type="text" inputmode="text" autocomplete="username" placeholder="请输入数字或字母账号" required /></div>
-          <div class="field-group"><label for="login-password">密码</label><div class="password-field"><input id="login-password" name="password" type="password" autocomplete="current-password" placeholder="请输入密码" required /><button id="toggle-password" class="icon-button password-toggle" type="button" aria-label="显示密码" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none"><path d="M2.5 12s3.4-6 9.5-6 9.5 6 9.5 6-3.4 6-9.5 6-9.5-6-9.5-6Z" stroke="currentColor" stroke-width="1.8"/><circle cx="12" cy="12" r="2.7" stroke="currentColor" stroke-width="1.8"/></svg></button></div></div>
-          <p id="login-error" class="form-message form-message--error" role="alert" hidden></p>
-          <button id="login-submit" class="button button--primary button--block button--large" type="submit"><span class="button-text">登录</span><span class="button-spinner" aria-hidden="true"></span></button>
-        </form>
-        <p class="auth-help">请使用管理员账号登录。账号需先在 Firebase Authentication 中创建。</p>
-      </section>
-      <aside class="auth-aside" aria-hidden="true"><div class="auth-aside__texture"></div><div class="auth-aside__copy"><span class="auth-aside__line"></span><p>一把琴，一份清晰的保养历史。</p><small>GUITAR MAINTENANCE ARCHIVE</small></div></aside>
-    </main>
+        <p class="splash-intro">记录每一把琴的状态，让保养刚好发生在需要的时候。</p>
+        <div class="splash-hint"><span class="loading-spinner" aria-hidden="true"></span><span>正在载入档案…</span></div>
+      </div>
+      <aside class="splash-aside" aria-hidden="true"><div class="splash-aside__texture"></div><div class="splash-aside__copy"><span class="splash-aside__line"></span><p>一把琴，一份清晰的保养历史。</p><small>GUITAR MAINTENANCE ARCHIVE</small></div></aside>
+    </section>
 
     <div id="app-view" class="app-shell" hidden>
       <aside id="sidebar" class="sidebar" aria-label="主导航">
@@ -315,7 +294,7 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
         </nav>
         <div class="sidebar__footer">
           <div id="connection-status" class="connection-status is-connecting" role="status" aria-live="polite"><span class="connection-status__dot"></span><span class="connection-status__text">正在连接数据服务…</span></div>
-          <div class="account-card"><span id="user-avatar" class="avatar avatar--initial" aria-hidden="true">管</span><div class="account-card__info"><strong id="user-name">管理员</strong><span id="user-email" title="">未登录</span></div><button id="logout-button" class="icon-button" type="button" title="退出登录" aria-label="退出登录"><svg viewBox="0 0 24 24" fill="none"><path d="M10 5H5.5A1.5 1.5 0 0 0 4 6.5v11A1.5 1.5 0 0 0 5.5 19H10M14 8l4 4-4 4M18 12H9" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button></div>
+          <div class="account-card"><span class="avatar avatar--initial" aria-hidden="true">琴</span><div class="account-card__info"><strong>内部工具</strong><span>已连接到云端档案</span></div></div>
         </div>
       </aside>
       <div id="sidebar-backdrop" class="sidebar-backdrop" hidden></div>
@@ -328,7 +307,7 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
     <div id="toast-container" class="toast-container" aria-live="polite" aria-atomic="true"></div>
     <div id="modal-container" class="modal-container" role="presentation"></div>
     <div id="app-loading" class="app-loading" hidden aria-live="polite" aria-busy="true"><div class="app-loading__card"><span class="loading-spinner"></span><span>正在处理…</span></div></div>
-    <noscript><div class="noscript-message">此网站需要启用 JavaScript 才能登录和查看保养档案。</div></noscript>
+    <noscript><div class="noscript-message">此网站需要启用 JavaScript 才能查看和修改保养档案。</div></noscript>
 
     <script>
       if (location.protocol === "file:") {
@@ -343,7 +322,6 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
     <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.4/build/qrcode.min.js"></script>
     <script type="module">
       import { initializeApp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
-      import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js";
       import { getDatabase, ref, onValue, set, update, remove, push, runTransaction } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-database.js";
 
       const firebaseConfig = {
@@ -357,7 +335,6 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
       };
 
 const firebaseApp = initializeApp(firebaseConfig);
-const auth = getAuth(firebaseApp);
 const db = getDatabase(firebaseApp);
 const rootRef = ref(db);
 
@@ -365,7 +342,6 @@ const $ = (selector, root = document) => root.querySelector(selector);
 const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
 
 const state = {
-  user: null,
   data: { people: {}, guitars: {}, maintenanceRecords: {}, meta: {} },
   ready: false,
   connection: false,
@@ -427,14 +403,7 @@ function getEffectiveNextMaintenanceDate(guitarId) {
 
 function isMaintenanceReminderEnabled(personId) {
   const person = getPerson(personId);
-  const value = person?.maintenanceReminder;
-  return value !== false && value !== "false" && value !== 0 && value !== "0";
-}
-
-function isMaintenanceReminderIgnored(guitarId) {
-  const guitar = getGuitar(guitarId);
-  const value = guitar?.maintenanceReminderIgnored;
-  return value === true || value === "true" || value === 1 || value === "1";
+  return person?.maintenanceReminder !== false;
 }
 
 function maintenanceStatus(nextDate) {
@@ -610,8 +579,7 @@ function renderDashboard() {
     latest: getLatestMaintenance(g.id),
     nextMaintenanceDate: getEffectiveNextMaintenanceDate(g.id),
     reminderEnabled: isMaintenanceReminderEnabled(g.personId),
-    reminderIgnored: isMaintenanceReminderIgnored(g.id),
-  })).filter((x) => x.nextMaintenanceDate && x.reminderEnabled && !x.reminderIgnored);
+  })).filter((x) => x.nextMaintenanceDate && x.reminderEnabled);
 
   const upcoming = guitarsWithDue.filter((x) => {
     const days = diffDays(x.nextMaintenanceDate);
@@ -628,7 +596,7 @@ function renderDashboard() {
 
   const overdueRows = overdue.length ? overdue.map((x) => {
     const days = Math.abs(diffDays(x.nextMaintenanceDate));
-    return `<div class="list-row"><a class="list-row__main" href="#/guitar/${x.id}"><div class="list-row__title">${esc(x.person?.name || "未归属")} ${typeBadge(x.person?.type)}</div><div class="list-row__sub">${esc(x.brand)} ${esc(x.model)} · 原定 ${formatDate(x.nextMaintenanceDate)}</div></a><div class="list-row__meta"><div>逾期 ${days} 天<br><span class="badge badge--red">已逾期</span></div><button class="button button--small" data-action="ignore-overdue" data-id="${esc(x.id)}">忽略</button></div></div>`;
+    return `<a class="list-row" href="#/guitar/${x.id}"><div class="list-row__main"><div class="list-row__title">${esc(x.person?.name || "未归属")} ${typeBadge(x.person?.type)}</div><div class="list-row__sub">${esc(x.brand)} ${esc(x.model)} · 原定 ${formatDate(x.nextMaintenanceDate)}</div></div><div class="list-row__meta">逾期 ${days} 天<br><span class="badge badge--red">已逾期</span></div></a>`;
   }).join("") : `<div class="empty-state"><strong>没有逾期记录</strong>目前所有已设置日期的吉他都在计划内。</div>`;
 
   return pageShell(
@@ -721,7 +689,7 @@ function renderGuitars() {
   const rows = guitars.length ? guitars.map((g) => {
     const nextDate = getEffectiveNextMaintenanceDate(g.id);
     const m = maintenanceStatus(nextDate);
-    const reminderText = !isMaintenanceReminderEnabled(g.personId) ? " · 已关闭提醒" : (isMaintenanceReminderIgnored(g.id) ? " · 已忽略逾期提醒" : "");
+    const reminderText = isMaintenanceReminderEnabled(g.personId) ? "" : " · 已关闭提醒";
     return `<tr><td><div class="table-main">${esc(g.person?.name || "未归属")}</div><span class="table-sub">${g.person ? (g.person.type === "student" ? "学员" : "访客") : ""}</span></td><td>${esc(g.brand || "—")}</td><td><div class="table-main">${esc(g.model || "—")}</div><span class="table-sub">${esc(g.serialNumber || "无序列号")}</span></td><td>${currentStatusBadge(g.status)}</td><td>${formatDate(g.latest?.maintenanceDate)}</td><td><span class="badge ${m.className}">${m.label}</span><div class="table-sub">${formatDate(nextDate)}${reminderText}</div></td><td><div class="row-actions"><a class="button button--small" href="#/guitar/${g.id}">查看</a><button class="button button--small" data-action="edit-guitar" data-id="${esc(g.id)}">编辑</button></div></td></tr>`;
   }).join("") : `<tr><td colspan="7"><div class="empty-state"><strong>没有符合条件的吉他</strong>可以换个搜索关键词或筛选条件。</div></td></tr>`;
 
@@ -743,16 +711,10 @@ function renderGuitarDetail(id) {
   const mStatus = maintenanceStatus(effectiveNextDate);
   const dueDays = effectiveNextDate ? diffDays(effectiveNextDate) : null;
   const reminderEnabled = isMaintenanceReminderEnabled(guitar.personId);
-  const reminderIgnored = isMaintenanceReminderIgnored(guitar.id);
-  const reminderAction = mStatus.key === "overdue"
-    ? (reminderIgnored
-      ? `<button class="button" data-action="restore-overdue" data-id="${esc(id)}">恢复逾期提醒</button>`
-      : `<button class="button" data-action="ignore-overdue" data-id="${esc(id)}">忽略本次逾期</button>`)
-    : "";
   const recordsHtml = records.length ? records.map((r) => `<article class="maintenance-item"><div class="maintenance-item__top"><div class="maintenance-item__date">${formatDate(r.maintenanceDate)}</div><div>${esc(r.maintenanceType || "常规保养")}</div></div><div class="maintenance-item__body">${esc(r.content || "未填写保养内容")}</div><div class="maintenance-item__meta"><span>费用：${r.cost ? moneyFormatter.format(Number(r.cost)) : "未填写"}</span><span>人员：${esc(r.technician || "未填写")}</span><span>下次：${formatDate(r.nextMaintenanceDate || addMonthsDate(r.maintenanceDate, 3))}</span></div>${r.note ? `<div class="maintenance-item__meta"><span>备注：${esc(r.note)}</span></div>` : ""}<div class="actions" style="margin-top:10px;justify-content:flex-start"><button class="button button--small" data-action="edit-maintenance" data-id="${esc(r.id)}">编辑</button><button class="button button--small" data-action="delete-maintenance" data-id="${esc(r.id)}">删除</button></div></article>`).join("") : `<div class="empty-state"><strong>还没有保养记录</strong>添加第一次保养后，历史会在这里按时间倒序保存。</div>`;
 
-  return pageShell(`${guitar.brand || "未填写品牌"} ${guitar.model || ""}`.trim(), `序列号：${guitar.serialNumber || "未填写"} · 所属：${person?.name || "未归属"}`, `<a class="button" href="#/person/${guitar.personId}">查看人员</a><button class="button" data-action="edit-guitar" data-id="${esc(id)}">编辑吉他</button>${reminderAction}<button class="button" data-action="qr-guitar" data-id="${esc(id)}">二维码</button><button class="button button--primary" data-action="new-maintenance" data-guitar-id="${esc(id)}">＋ 新增保养</button>`, `
-    <div class="detail-grid"><section class="detail-card"><div class="detail-card__body"><div class="detail-head"><div><h3 class="detail-title">${esc(guitar.brand || "未填写品牌")} ${esc(guitar.model || "")}</h3><p class="detail-sub">${person ? `${esc(person.name)} · ${person.type === "student" ? "学员" : "访客"}` : "未归属人员"}</p></div><div style="display:grid;gap:7px;text-align:right">${currentStatusBadge(guitar.status)}<span class="badge ${mStatus.className}">${mStatus.label}</span></div></div><dl class="kv-grid"><div class="kv"><dt>品牌</dt><dd>${esc(guitar.brand || "未填写")}</dd></div><div class="kv"><dt>型号</dt><dd>${esc(guitar.model || "未填写")}</dd></div><div class="kv"><dt>序列号</dt><dd>${esc(guitar.serialNumber || "未填写")}</dd></div><div class="kv"><dt>购买日期</dt><dd>${formatDate(guitar.purchaseDate)}</dd></div><div class="kv"><dt>上次保养</dt><dd>${formatDate(latest?.maintenanceDate)}</dd></div><div class="kv"><dt>下次保养</dt><dd>${formatDate(effectiveNextDate)}</dd></div><div class="kv"><dt>保养提醒</dt><dd>${effectiveNextDate ? (dueDays === 0 ? "今天" : dueDays > 0 ? `还有 ${dueDays} 天` : `已逾期 ${Math.abs(dueDays)} 天`) : "未设置"}</dd></div><div class="kv"><dt>提醒设置</dt><dd>${reminderEnabled ? '<span class="badge badge--green">已开启</span>' : '<span class="badge badge--gray">已关闭</span>'}${reminderIgnored ? ' <span class="badge badge--gray">本次逾期已忽略</span>' : ''}</dd></div><div class="kv"><dt>备注</dt><dd>${esc(guitar.note || "无")}</dd></div></dl><div class="notice" style="margin-top:18px">照片云端上传暂未启用：Firebase Cloud Storage 目前要求 Blaze 计费计划，因此第一版保持 100% Spark 免费方案，不上传云端图片。</div></div></section><section class="panel"><header class="panel__header"><div><h3>保养历史</h3><span>${records.length} 条记录 · 默认按季度（每 3 个月）顺延</span></div></header><div class="maintenance-list">${recordsHtml}</div></section></div>`
+  return pageShell(`${guitar.brand || "未填写品牌"} ${guitar.model || ""}`.trim(), `序列号：${guitar.serialNumber || "未填写"} · 所属：${person?.name || "未归属"}`, `<a class="button" href="#/person/${guitar.personId}">查看人员</a><button class="button" data-action="edit-guitar" data-id="${esc(id)}">编辑吉他</button><button class="button" data-action="qr-guitar" data-id="${esc(id)}">二维码</button><button class="button button--primary" data-action="new-maintenance" data-guitar-id="${esc(id)}">＋ 新增保养</button>`, `
+    <div class="detail-grid"><section class="detail-card"><div class="detail-card__body"><div class="detail-head"><div><h3 class="detail-title">${esc(guitar.brand || "未填写品牌")} ${esc(guitar.model || "")}</h3><p class="detail-sub">${person ? `${esc(person.name)} · ${person.type === "student" ? "学员" : "访客"}` : "未归属人员"}</p></div><div style="display:grid;gap:7px;text-align:right">${currentStatusBadge(guitar.status)}<span class="badge ${mStatus.className}">${mStatus.label}</span></div></div><dl class="kv-grid"><div class="kv"><dt>品牌</dt><dd>${esc(guitar.brand || "未填写")}</dd></div><div class="kv"><dt>型号</dt><dd>${esc(guitar.model || "未填写")}</dd></div><div class="kv"><dt>序列号</dt><dd>${esc(guitar.serialNumber || "未填写")}</dd></div><div class="kv"><dt>购买日期</dt><dd>${formatDate(guitar.purchaseDate)}</dd></div><div class="kv"><dt>上次保养</dt><dd>${formatDate(latest?.maintenanceDate)}</dd></div><div class="kv"><dt>下次保养</dt><dd>${formatDate(effectiveNextDate)}</dd></div><div class="kv"><dt>保养提醒</dt><dd>${effectiveNextDate ? (dueDays === 0 ? "今天" : dueDays > 0 ? `还有 ${dueDays} 天` : `已逾期 ${Math.abs(dueDays)} 天`) : "未设置"}</dd></div><div class="kv"><dt>提醒设置</dt><dd>${reminderEnabled ? '<span class="badge badge--green">已开启</span>' : '<span class="badge badge--gray">已关闭</span>'}</dd></div><div class="kv"><dt>备注</dt><dd>${esc(guitar.note || "无")}</dd></div></dl><div class="notice" style="margin-top:18px">照片云端上传暂未启用：Firebase Cloud Storage 目前要求 Blaze 计费计划，因此第一版保持 100% Spark 免费方案，不上传云端图片。</div></div></section><section class="panel"><header class="panel__header"><div><h3>保养历史</h3><span>${records.length} 条记录 · 默认按季度（每 3 个月）顺延</span></div></header><div class="maintenance-list">${recordsHtml}</div></section></div>`
   );
 }
 
@@ -769,7 +731,6 @@ function renderSettings() {
 }
 
 async function renderRoute() {
-  if (!state.user) return;
   const main = $("#main-content");
   if (!state.ready) {
     main.innerHTML = `<section class="page-state"><div><span class="loading-spinner"></span><p>正在加载档案…</p></div></section>`;
@@ -893,7 +854,6 @@ async function saveMaintenance(form, recordId = null) {
   ensureDatabaseConnected();
   if (recordId) {
     await withTimeout(update(ref(db, `maintenanceRecords/${recordId}`), data));
-    await withTimeout(update(ref(db, `guitars/${data.guitarId}`), { maintenanceReminderIgnored: false, updatedAt: now }));
     return recordId;
   }
   const seq = await nextSequence("maintenance");
@@ -902,7 +862,6 @@ async function saveMaintenance(form, recordId = null) {
   data.displayNo = `R${String(seq).padStart(3, "0")}`;
   data.id = newRef.key;
   await withTimeout(set(newRef, data));
-  await withTimeout(update(ref(db, `guitars/${data.guitarId}`), { maintenanceReminderIgnored: false, updatedAt: now }));
   return newRef.key;
 }
 
@@ -1089,196 +1048,6 @@ async function seedDemo() {
   } finally { setAppLoading(false); }
 }
 
-// 为兼容当前 Firebase 账号 001@1.com，网站显示“001”时会在后台自动拼接为 001@1.com。
-// 以后新增账号也按“账号@1.com”的格式在 Firebase Authentication 中创建即可。
-const AUTH_USERNAME_SUFFIX = "@1.com";
-
-function usernameToAuthEmail(username) {
-  const value = String(username || "").trim();
-  if (!/^[A-Za-z0-9._-]{1,64}$/.test(value)) {
-    throw new Error("账号只能使用数字、字母、点、下划线或连字符，长度 1-64 位。");
-  }
-  return `${value}${AUTH_USERNAME_SUFFIX}`;
-}
-
-function normalizeAuthError(error) {
-  const map = {
-    "auth/invalid-credential": "账号或密码不正确。",
-    "auth/invalid-email": "账号格式不正确。",
-    "auth/user-disabled": "这个账号已被禁用。",
-    "auth/too-many-requests": "尝试次数过多，请稍后再试。",
-    "auth/network-request-failed": "网络连接失败，请检查网络。",
-    "auth/operation-not-allowed": "Firebase 尚未开启“邮箱/密码”登录。",
-    "auth/unauthorized-domain": "当前网站域名尚未加入 Firebase Authentication 的授权域名。",
-    "auth/invalid-api-key": "Firebase 配置中的 API Key 无效。",
-  };
-  if (error?.code) {
-    return `${map[error.code] || "登录失败。"}\n错误代码：${error.code}`;
-  }
-  return `登录失败：${error?.message || "未知错误"}`;
-}
-
-function hydrateAccount(user) {
-  const email = user?.email || "";
-  const username = email ? email.split("@")[0] : "";
-  $("#user-name").textContent = username || "管理员";
-  $("#user-email").textContent = user ? "已登录" : "未登录";
-  $("#user-email").title = email;
-  $("#user-avatar").textContent = (username[0] || "管").toUpperCase();
-}
-
-function bindStaticEvents() {
-  $("#login-form")?.addEventListener("submit", async (event) => {
-    event.preventDefault();
-    const form = event.currentTarget;
-    const username = form.email.value.trim();
-    const password = form.password.value;
-    const errorEl = $("#login-error");
-    const submit = $("#login-submit");
-    errorEl.hidden = true;
-    submit.classList.add("is-loading");
-    submit.disabled = true;
-    try {
-      const email = usernameToAuthEmail(username);
-      await signInWithEmailAndPassword(auth, email, password);
-    } catch (error) {
-      errorEl.textContent = normalizeAuthError(error);
-      errorEl.hidden = false;
-    } finally {
-      submit.classList.remove("is-loading");
-      submit.disabled = false;
-    }
-  });
-
-  $("#toggle-password")?.addEventListener("click", () => {
-    const input = $("#login-password");
-    const button = $("#toggle-password");
-    const visible = input.type === "text";
-    input.type = visible ? "password" : "text";
-    button.setAttribute("aria-pressed", String(!visible));
-    button.setAttribute("aria-label", visible ? "显示密码" : "隐藏密码");
-  });
-
-  $("#logout-button")?.addEventListener("click", async () => { await signOut(auth); });
-  $("#sidebar-toggle")?.addEventListener("click", openSidebar);
-  $("#sidebar-close")?.addEventListener("click", closeSidebar);
-  $("#sidebar-backdrop")?.addEventListener("click", closeSidebar);
-
-  document.addEventListener("click", async (event) => {
-    const button = event.target.closest("[data-action]");
-    if (!button) return;
-    const action = button.dataset.action;
-    try {
-      if (action === "new-person") openPersonModal();
-      if (action === "edit-person") openPersonModal(button.dataset.id);
-      if (action === "new-guitar") openGuitarModal(null, button.dataset.personId || "");
-      if (action === "edit-guitar") openGuitarModal(button.dataset.id);
-      if (action === "new-maintenance") openMaintenanceModal(button.dataset.guitarId);
-      if (action === "ignore-overdue") {
-        ensureDatabaseConnected();
-        await withTimeout(update(ref(db, `guitars/${button.dataset.id}`), { maintenanceReminderIgnored: true, updatedAt: Date.now() }));
-        toast("已忽略这把琴本次逾期提醒。", "success");
-        renderRoute();
-      }
-      if (action === "restore-overdue") {
-        ensureDatabaseConnected();
-        await withTimeout(update(ref(db, `guitars/${button.dataset.id}`), { maintenanceReminderIgnored: false, updatedAt: Date.now() }));
-        toast("已恢复这把琴的逾期提醒。", "success");
-        renderRoute();
-      }
-      if (action === "edit-maintenance") {
-        const r = state.data.maintenanceRecords?.[button.dataset.id];
-        if (r) openMaintenanceModal(r.guitarId, button.dataset.id);
-      }
-      if (action === "delete-maintenance") await deleteMaintenance(button.dataset.id);
-      if (action === "delete-guitar") await deleteGuitar(button.dataset.id);
-      if (action === "person-filter") { state.personFilter = button.dataset.filter; renderRoute(); }
-      if (action === "guitar-filter") { state.guitarStatusFilter = button.dataset.filter; renderRoute(); }
-      if (action === "export-json") exportJSON();
-      if (action === "export-csv") exportCSV();
-      if (action === "clear-all") {
-        const one = await askConfirm("清空全部数据", "这会删除所有人员、吉他和保养记录，无法通过网页撤销。建议先导出 JSON。", "下一步");
-        if (!one) return;
-        const two = await askConfirm("再次确认", "你确定要彻底清空这个 Firebase 数据库吗？", "彻底清空");
-        if (!two) return;
-        setAppLoading(true, "正在清空数据…");
-        try { await set(rootRef, {}); toast("全部数据已清空。", "success"); } finally { setAppLoading(false); }
-      }
-      if (action === "seed-demo") await seedDemo();
-      if (action === "qr-guitar") await openQrModal(button.dataset.id);
-      if (action === "delete-person") await deletePerson(button.dataset.id);
-      if (action === "restore-person") {
-        ensureDatabaseConnected();
-        await withTimeout(update(ref(db, `people/${button.dataset.id}`), { active: true, updatedAt: Date.now() }));
-        toast("人员档案已恢复。", "success");
-      }
-      if (action === "deactivate-person") {
-        ensureDatabaseConnected();
-        await withTimeout(update(ref(db, `people/${button.dataset.id}`), { active: false, updatedAt: Date.now() }));
-        toast("人员已停用。", "success");
-        location.hash = "#/people";
-      }
-    } catch (error) {
-      console.error(error);
-      toast(error?.message || "操作失败，请稍后重试。", "error");
-    }
-  });
-
-  document.addEventListener("submit", async (event) => {
-    if (!(event.target instanceof HTMLFormElement)) return;
-    const form = event.target;
-    if (!["person-form", "guitar-form", "maintenance-form"].includes(form.id)) return;
-    event.preventDefault();
-    setAppLoading(true, "正在保存…");
-    try {
-      if (form.id === "person-form") {
-        const personId = form.dataset.id || null;
-        await savePerson(form, personId);
-        closeModal(); toast("人员已保存。", "success"); renderRoute();
-      }
-      if (form.id === "guitar-form") {
-        await saveGuitar(form, form.dataset.id || null);
-        const target = form.dataset.personId || form.personId.value;
-        closeModal(); toast("吉他档案已保存。", "success"); location.hash = `#/person/${target}`;
-      }
-      if (form.id === "maintenance-form") {
-        const guitarId = form.guitarId.value;
-        await saveMaintenance(form, form.dataset.id || null);
-        closeModal(); toast("保养记录已保存。", "success"); location.hash = `#/guitar/${guitarId}`;
-      }
-    } catch (error) {
-      toast(error?.message || "保存失败。", "error");
-    } finally { setAppLoading(false); }
-  });
-
-  document.addEventListener("input", (event) => {
-    if (event.target.id === "people-search") { state.personSearch = event.target.value; renderRoute(); requestAnimationFrame(() => { const el = $("#people-search"); el?.focus(); el?.setSelectionRange(el.value.length, el.value.length); }); }
-    if (event.target.id === "guitars-search") { state.guitarSearch = event.target.value; renderRoute(); requestAnimationFrame(() => { const el = $("#guitars-search"); el?.focus(); el?.setSelectionRange(el.value.length, el.value.length); }); }
-  });
-
-  document.addEventListener("change", async (event) => {
-    if (event.target.id === "import-json-input" && event.target.files?.[0]) {
-      try { await importJSON(event.target.files[0]); } catch (error) { toast(error?.message || "导入失败。", "error"); }
-      event.target.value = "";
-    }
-  });
-}
-
-async function openQrModal(guitarId) {
-  const guitar = getGuitar(guitarId);
-  if (!guitar) return;
-  const url = new URL(window.location.href);
-  url.hash = `/guitar/${guitarId}`;
-  const guitarUrl = url.href;
-  if (!window.QRCode) { toast("二维码组件还没有加载完成。请稍后再试。", "error"); return; }
-  setAppLoading(true, "正在生成二维码…");
-  try {
-    const dataUrl = await window.QRCode.toDataURL(guitarUrl, { width: 360, margin: 2, errorCorrectionLevel: "M" });
-    showModal({ title: `${guitar.brand || "吉他"} ${guitar.model || ""} · 二维码`, small: true, body: `<div class="qr-box"><img id="qr-preview" src="${dataUrl}" alt="吉他档案二维码"><div class="qr-url">${esc(guitarUrl)}</div></div>`, footer: `<a class="button" download="${esc(guitar.brand || "guitar")}-${esc(guitar.model || "")}-二维码.png" href="${dataUrl}">下载图片</a><button class="button button--primary" data-action="print-qr">打印</button>`, onOpen: (container) => { $("[data-action=print-qr]", container).addEventListener("click", () => { const w = window.open("", "_blank", "width=600,height=700"); if (!w) return toast("浏览器拦截了打印窗口，请允许弹出窗口。", "error"); w.document.write(`<html><head><title>吉他二维码</title><style>body{font-family:system-ui,-apple-system,sans-serif;text-align:center;padding:32px}img{width:360px;max-width:80vw}h1{font-size:22px;margin:0 0 10px}p{color:#666;word-break:break-all}</style></head><body><h1>${esc(guitar.brand || "吉他")} ${esc(guitar.model || "")}</h1><img src="${dataUrl}" alt="二维码"><p>${esc(guitarUrl)}</p><script>window.onload=()=>window.print();<\/script></body></html>`); w.document.close(); }); }});
-  } catch (error) { toast("二维码生成失败。", "error"); }
-  finally { setAppLoading(false); }
-}
-
 function stopDatabaseListener() {
   if (state.dbLoadingTimer) {
     clearTimeout(state.dbLoadingTimer);
@@ -1296,11 +1065,11 @@ function databaseDiagnosticMessage() {
       <p style="margin:0 0 12px;line-height:1.8">网站本身已经打开，但超过 10 秒仍没有拿到 Realtime Database 的首次数据。</p>
       <p style="margin:0 0 8px"><strong>当前项目：</strong>${esc(firebaseConfig.projectId)}</p>
       <p style="margin:0 0 8px;word-break:break-all"><strong>数据库：</strong>${esc(firebaseConfig.databaseURL)}</p>
-      <p style="margin:0 0 8px">请检查 Firebase → Realtime Database → Rules 是否为：</p>
+      <p style="margin:0 0 8px">请检查 Firebase → Realtime Database → Rules 是否已允许网站直接读写。</p>
       <pre style="margin:0 0 12px;overflow:auto;background:#f7f6f2;padding:12px;border-radius:10px">{
   "rules": {
-    ".read": "auth != null",
-    ".write": "auth != null"
+    ".read": true,
+    ".write": true
   }
 }</pre>
       <p style="margin:0;line-height:1.8">如果 Rules 正确，优先检查当前网络是否能够访问 Firebase。请打开浏览器开发者工具 Console，看有没有红色的 Firebase 错误。</p>
@@ -1342,29 +1111,24 @@ function startDatabaseListener() {
   const stopConnection = onValue(ref(db, ".info/connected"), (snap) => setConnection(Boolean(snap.val())));
   state.dbUnsubs = [stopRoot, stopConnection];
 }
-onAuthStateChanged(auth, (user) => {
-  state.user = user;
-  const loginView = $("#login-view");
+function enterApp() {
+  const splash = $("#splash-screen");
   const appView = $("#app-view");
-  if (user) {
-    loginView.hidden = true;
-    appView.hidden = false;
-    hydrateAccount(user);
-    if (!state.ready) startDatabaseListener();
-    if (!location.hash) location.hash = "#/dashboard";
-    renderRoute();
-  } else {
-    stopDatabaseListener();
-    loginView.hidden = false;
-    appView.hidden = true;
-    state.ready = false;
-    hydrateAccount(null);
-  }
-});
+  if (appView.hidden) appView.hidden = false;
+  if (!location.hash) location.hash = "#/dashboard";
+  renderRoute();
+  window.setTimeout(() => splash?.classList.add("is-hidden"), 30);
+}
 
 window.addEventListener("hashchange", renderRoute);
 bindStaticEvents();
 setConnection(false);
+startDatabaseListener();
+const splashStartedAt = Date.now();
+const splashMinimum = 2000;
+window.setTimeout(() => {
+  enterApp();
+}, Math.max(0, splashMinimum - (Date.now() - splashStartedAt)));
 
     </script>
   </body>
