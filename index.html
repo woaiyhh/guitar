@@ -319,7 +319,7 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
         });
       }
     </script>
-    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.4/build/qrcode.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.1/build/qrcode.min.js"></script>
     <script type="module">
       import { initializeApp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
       import { getDatabase, ref, onValue, set, update, remove, push, runTransaction } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-database.js";
@@ -1118,6 +1118,237 @@ function enterApp() {
   if (!location.hash) location.hash = "#/dashboard";
   renderRoute();
   window.setTimeout(() => splash?.classList.add("is-hidden"), 30);
+}
+
+
+function openQRCodeModal(guitarId) {
+  const guitar = getGuitar(guitarId);
+  if (!guitar) return;
+  const url = new URL(location.href);
+  url.hash = `#/guitar/${guitarId}`;
+  const targetUrl = url.toString();
+  showModal({
+    title: `${guitar.brand || ""} ${guitar.model || ""}`.trim() + " · 二维码",
+    body: `<div class="qr-box"><canvas id="qr-canvas" width="280" height="280" aria-label="吉他档案二维码"></canvas><p class="qr-url">${esc(targetUrl)}</p><p id="qr-error" class="form-message form-message--error" hidden></p></div>`,
+    footer: `<button class="button" data-close-modal>关闭</button><button class="button" data-action="print-qr" data-id="${esc(guitarId)}">打印二维码</button><button class="button button--primary" data-action="download-qr" data-id="${esc(guitarId)}">下载二维码</button>`,
+    onOpen(container) {
+      const canvas = $("#qr-canvas", container);
+      const errorBox = $("#qr-error", container);
+      if (!window.QRCode?.toCanvas) {
+        if (errorBox) {
+          errorBox.hidden = false;
+          errorBox.textContent = "二维码组件没有加载成功，请刷新页面后重试。";
+        }
+        return;
+      }
+      window.QRCode.toCanvas(canvas, targetUrl, { width: 280, margin: 2 }, (error) => {
+        if (error && errorBox) {
+          errorBox.hidden = false;
+          errorBox.textContent = `二维码生成失败：${error.message || error}`;
+        }
+      });
+    },
+  });
+}
+
+async function downloadQRCode(guitarId) {
+  const guitar = getGuitar(guitarId);
+  if (!guitar) return;
+  const url = new URL(location.href);
+  url.hash = `#/guitar/${guitarId}`;
+  if (!window.QRCode?.toDataURL) {
+    toast("二维码组件没有加载成功，请刷新页面后重试。", "error");
+    return;
+  }
+  try {
+    const dataUrl = await window.QRCode.toDataURL(url.toString(), { width: 900, margin: 2 });
+    const a = document.createElement("a");
+    a.href = dataUrl;
+    a.download = `${(guitar.brand || "guitar")}-${(guitar.model || "archive")}-二维码.png`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  } catch (error) {
+    toast(`二维码生成失败：${error.message || error}`, "error");
+  }
+}
+
+function printQRCode(guitarId) {
+  const guitar = getGuitar(guitarId);
+  if (!guitar || !window.QRCode?.toDataURL) {
+    toast("二维码组件没有加载成功，请刷新页面后重试。", "error");
+    return;
+  }
+  const url = new URL(location.href);
+  url.hash = `#/guitar/${guitarId}`;
+  window.QRCode.toDataURL(url.toString(), { width: 900, margin: 2 }, (error, dataUrl) => {
+    if (error) {
+      toast(`二维码生成失败：${error.message || error}`, "error");
+      return;
+    }
+    const printWindow = window.open("", "_blank", "noopener,noreferrer");
+    if (!printWindow) {
+      toast("浏览器阻止了打印窗口，请允许弹出窗口后重试。", "error");
+      return;
+    }
+    printWindow.document.write(`<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><title>二维码</title><style>body{font-family:system-ui,-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;text-align:center;padding:40px;color:#1e2824}img{width:320px;height:320px}.title{font-size:22px;font-weight:700;margin-bottom:8px}.sub{color:#69756f;margin-bottom:24px}@media print{button{display:none}}</style></head><body><div class="title">${esc(guitar.brand || "")} ${esc(guitar.model || "")}</div><div class="sub">${esc(guitar.serialNumber || "未填写序列号")}</div><img src="${dataUrl}" alt="吉他档案二维码"><script>window.onload=()=>window.print()<\/script></body></html>`);
+    printWindow.document.close();
+  });
+}
+
+async function clearAllData() {
+  const okay = await askConfirm("清空全部数据", "将删除全部人员、吉他、保养记录和编号计数。此操作不可通过网页撤销，请先导出 JSON 备份。", "彻底清空");
+  if (!okay) return;
+  setAppLoading(true, "正在清空全部数据…");
+  try {
+    ensureDatabaseConnected();
+    await withTimeout(set(rootRef, { people: {}, guitars: {}, maintenanceRecords: {}, meta: {} }), 12000, "清空数据超时，请检查 Firebase 连接。");
+    toast("全部数据已清空。", "success");
+    location.hash = "#/dashboard";
+  } finally {
+    setAppLoading(false);
+  }
+}
+
+async function setPersonActive(personId, active) {
+  const person = getPerson(personId);
+  if (!person) return;
+  const label = active ? "恢复" : "停用";
+  const okay = await askConfirm(`${label}人员`, `${label}${person.name || "这个人员"}后，历史吉他与保养记录会继续保留。`, label);
+  if (!okay) return;
+  setAppLoading(true, `${label}中…`);
+  try {
+    ensureDatabaseConnected();
+    await withTimeout(update(ref(db, `people/${personId}`), { active, updatedAt: Date.now() }));
+    toast(`人员已${label}。`, "success");
+    renderRoute();
+  } finally {
+    setAppLoading(false);
+  }
+}
+
+function bindStaticEvents() {
+  if (window.__guitarMaintenanceEventsBound) return;
+  window.__guitarMaintenanceEventsBound = true;
+
+  $("#sidebar-toggle")?.addEventListener("click", openSidebar);
+  $("#sidebar-close")?.addEventListener("click", closeSidebar);
+  $("#sidebar-backdrop")?.addEventListener("click", closeSidebar);
+
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") closeModal();
+  });
+
+  document.addEventListener("click", async (event) => {
+    const actionEl = event.target.closest("[data-action]");
+    if (!actionEl) return;
+    const action = actionEl.dataset.action;
+    try {
+      switch (action) {
+        case "new-person": openPersonModal(); break;
+        case "edit-person": openPersonModal(actionEl.dataset.id); break;
+        case "deactivate-person": await setPersonActive(actionEl.dataset.id, false); break;
+        case "restore-person": await setPersonActive(actionEl.dataset.id, true); break;
+        case "delete-person": await deletePerson(actionEl.dataset.id); break;
+        case "person-filter":
+          state.personFilter = actionEl.dataset.filter || "all";
+          renderRoute();
+          break;
+        case "new-guitar": openGuitarModal(null, actionEl.dataset.personId || ""); break;
+        case "edit-guitar": openGuitarModal(actionEl.dataset.id); break;
+        case "delete-guitar": await deleteGuitar(actionEl.dataset.id); break;
+        case "guitar-filter":
+          state.guitarStatusFilter = actionEl.dataset.filter || "all";
+          renderRoute();
+          break;
+        case "new-maintenance": openMaintenanceModal(actionEl.dataset.guitarId); break;
+        case "edit-maintenance": {
+          const record = state.data.maintenanceRecords?.[actionEl.dataset.id];
+          if (record) openMaintenanceModal(record.guitarId, actionEl.dataset.id);
+          break;
+        }
+        case "delete-maintenance": await deleteMaintenance(actionEl.dataset.id); break;
+        case "qr-guitar": openQRCodeModal(actionEl.dataset.id); break;
+        case "download-qr": await downloadQRCode(actionEl.dataset.id); break;
+        case "print-qr": printQRCode(actionEl.dataset.id); break;
+        case "export-json": exportJSON(); break;
+        case "export-csv": exportCSV(); break;
+        case "seed-demo": await seedDemo(); break;
+        case "clear-all": await clearAllData(); break;
+        default: break;
+      }
+    } catch (error) {
+      toast(error?.message || "操作失败，请重试。", "error");
+    }
+  });
+
+  document.addEventListener("submit", async (event) => {
+    const form = event.target;
+    if (!(form instanceof HTMLFormElement)) return;
+    let resultId = null;
+    try {
+      if (form.id === "person-form") {
+        event.preventDefault();
+        setAppLoading(true, "正在保存人员…");
+        resultId = await savePerson(form, form.dataset.id || null);
+        const editing = Boolean(form.dataset.id);
+        closeModal();
+        toast("人员已保存。", "success");
+        location.hash = editing ? `#/person/${resultId}` : "#/people";
+      } else if (form.id === "guitar-form") {
+        event.preventDefault();
+        setAppLoading(true, "正在保存吉他…");
+        resultId = await saveGuitar(form, form.dataset.id || null);
+        closeModal();
+        toast("吉他档案已保存。", "success");
+        location.hash = `#/guitar/${resultId}`;
+      } else if (form.id === "maintenance-form") {
+        event.preventDefault();
+        setAppLoading(true, "正在保存保养记录…");
+        resultId = await saveMaintenance(form, form.dataset.id || null);
+        const guitarId = form.querySelector('[name="guitarId"]')?.value;
+        closeModal();
+        toast("保养记录已保存。", "success");
+        location.hash = `#/guitar/${guitarId}`;
+      }
+    } catch (error) {
+      toast(error?.message || "保存失败，请重试。", "error");
+    } finally {
+      if (form.id === "person-form" || form.id === "guitar-form" || form.id === "maintenance-form") setAppLoading(false);
+    }
+  });
+
+  document.addEventListener("input", (event) => {
+    const input = event.target;
+    if (!(input instanceof HTMLInputElement)) return;
+    if (input.id === "people-search") {
+      state.personSearch = input.value;
+      clearTimeout(window.__peopleSearchTimer);
+      const selectionStart = input.selectionStart;
+      window.__peopleSearchTimer = setTimeout(() => {
+        renderRoute();
+        const next = $("#people-search");
+        if (next) { next.focus(); const pos = Math.min(selectionStart ?? next.value.length, next.value.length); next.setSelectionRange(pos, pos); }
+      }, 80);
+    } else if (input.id === "guitars-search") {
+      state.guitarSearch = input.value;
+      clearTimeout(window.__guitarSearchTimer);
+      const selectionStart = input.selectionStart;
+      window.__guitarSearchTimer = setTimeout(() => {
+        renderRoute();
+        const next = $("#guitars-search");
+        if (next) { next.focus(); const pos = Math.min(selectionStart ?? next.value.length, next.value.length); next.setSelectionRange(pos, pos); }
+      }, 80);
+    }
+  });
+
+  document.addEventListener("change", (event) => {
+    const input = event.target;
+    if (input instanceof HTMLInputElement && input.id === "import-json-input" && input.files?.[0]) {
+      const file = input.files[0];
+      importJSON(file).catch((error) => toast(error?.message || "导入失败。", "error")).finally(() => { input.value = ""; });
+    }
+  });
 }
 
 window.addEventListener("hashchange", renderRoute);
